@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>單字選擇題</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" id="backLink" href="vocabquiz.html">‹</a>
+    <div><h1>🔤 選擇題</h1><div class="sub" id="subtitle"></div></div>
+  </div>
+
+  <div id="stage">
+    <div class="card">
+      <div class="q-num" id="qNum"></div>
+      <div class="q-text" id="qText"></div>
+      <div id="opts"></div>
+      <div id="explain" class="explain hidden"></div>
+      <button class="btn primary hidden" id="btnNext">下一題</button>
+    </div>
+  </div>
+
+  <div id="done" class="hidden">
+    <div class="card center">
+      <div style="font-size:3rem" id="doneEmoji">🎉</div>
+      <div class="score-big" id="doneStat"></div>
+      <div class="score-sub" id="doneSub"></div>
+      <button class="btn primary" onclick="location.reload()">再考一次</button>
+      <div style="height:10px"></div>
+      <a class="btn ghost" id="doneBack">回單字表</a>
+    </div>
+  </div>
+</main>
+<script src="data/words.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const set = WORD_SETS.find(s => s.id === qs("set")) || WORD_SETS[0];
+  $("#subtitle").textContent = `${set.icon} ${set.name}`;
+  $("#backLink").href = `vocabquiz.html?set=${set.id}`;
+  $("#doneBack").href = `wordlist.html?set=${set.id}`;
+
+  const N = Math.min(10, set.words.length);
+  const picked = sampleN(set.words.map((w,i) => ({en:w[0], zh:w[1], pos:w[2], ex:w[3]||"", idx:i})), N);
+
+  // 每題隨機方向：中→英 或 英→中
+  const quiz = picked.map(w => {
+    const zh2en = Math.random() < 0.5;
+    const pool = set.words
+      .filter(x => x[0] !== w.en && x[1] !== w.zh)
+      .map(x => zh2en ? x[0] : x[1]);
+    const opts = shuffle([...new Set(pool)]).slice(0,3).concat(zh2en ? w.en : w.zh);
+    return {w, zh2en, opts: shuffle(opts), ans: zh2en ? w.en : w.zh};
+  });
+
+  let cur = 0, score = 0;
+
+  function render(){
+    const q = quiz[cur];
+    $("#qNum").textContent = `第 ${cur+1} / ${quiz.length} 題　${q.zh2en ? "中 → 英" : "英 → 中"}`;
+    $("#qText").textContent = q.zh2en ? `${q.w.zh}（${q.w.pos}）` : q.w.en;
+    if (!q.zh2en) speak(q.w.en);
+    $("#explain").classList.add("hidden");
+    $("#btnNext").classList.add("hidden");
+    $("#opts").innerHTML = q.opts.map((o,i) =>
+      `<button class="opt" data-i="${i}">${"ABCD"[i]}. ${esc(o)}</button>`).join("");
+    $$(".opt").forEach(b => b.onclick = () => answer(+b.dataset.i));
+  }
+
+  function answer(i){
+    const q = quiz[cur];
+    const ok = q.opts[i] === q.ans;
+    $$(".opt").forEach((b,bi) => {
+      b.disabled = true;
+      if (q.opts[bi] === q.ans) b.classList.add("correct");
+      else if (bi === i) b.classList.add("wrong");
+    });
+    const v = getVocab(set.id);
+    if (ok){
+      score++;
+      v.known[q.w.idx] = true;
+      delete v.hard[q.w.idx];
+    } else {
+      v.hard[q.w.idx] = true;
+      delete v.known[q.w.idx];
+    }
+    setVocab(set.id, v);
+    speak(q.w.en);
+
+    const ex = $("#explain");
+    ex.classList.remove("hidden","good","bad");
+    ex.classList.add(ok ? "good" : "bad");
+    ex.innerHTML = (ok ? "✅ 答對了！" : `❌ 正確答案是 <b>${esc(q.ans)}</b>`) +
+      `<br><b>${esc(q.w.en)}</b> ${esc(q.w.pos)} ${esc(q.w.zh)}` +
+      (q.w.ex ? `<br><span class="muted">${esc(q.w.ex)}</span>` : "");
+    $("#btnNext").textContent = cur === quiz.length-1 ? "看成績" : "下一題";
+    $("#btnNext").classList.remove("hidden");
+  }
+
+  $("#btnNext").onclick = () => {
+    cur++;
+    if (cur >= quiz.length){ finish(); return; }
+    render();
+  };
+
+  function finish(){
+    const pct = Math.round(score/quiz.length*100);
+    $("#stage").classList.add("hidden");
+    $("#done").classList.remove("hidden");
+    $("#doneEmoji").textContent = pct >= 90 ? "🏆" : pct >= 70 ? "🎉" : "💪";
+    $("#doneStat").textContent = `${score} / ${quiz.length}`;
+    $("#doneSub").textContent = score === quiz.length
+      ? "全對！這個主題你很熟了！"
+      : "答錯的字已加入複習清單";
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

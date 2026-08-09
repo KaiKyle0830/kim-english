@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>背單字</title>
+<title>學單字</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="stylesheet" href="css/style.css">
@@ -13,7 +13,7 @@
 <main>
   <div class="top">
     <a class="back" href="index.html">‹</a>
-    <div><h1>🃏 背單字</h1><div class="sub">點單元開始練習；點 🎯 設為目標</div></div>
+    <div><h1>📚 學單字</h1><div class="sub">點主題看單字表；點 🎯 設為目標</div></div>
   </div>
   <div class="card" id="setList"></div>
 </main>
@@ -29,7 +29,7 @@
       const known = Object.keys(v.known).length;
       const done = known >= s.words.length;
       const isGoal = s.id === goal;
-      return `<a class="row" href="cards.html?set=${s.id}" ${isGoal?'style="background:rgba(79,109,245,.07);border-radius:12px"':''}>
+      return `<a class="row" href="wordlist.html?set=${s.id}" ${isGoal?'style="background:rgba(79,109,245,.07);border-radius:12px"':''}>
         <span style="font-size:1.5rem">${s.icon}</span>
         <span style="flex:1">
           <b>${s.name}</b>${isGoal?' <span class="badge" style="background:rgba(79,109,245,.15);color:var(--accent)">🎯 目標</span>':''}

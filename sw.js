@@ -1,7 +1,8 @@
 // 離線快取：安裝時抓齊所有資源，之後快取優先、背景更新
-const CACHE = "kim-english-v3";
+const CACHE = "kim-english-v4";
 const ASSETS = [
-  "index.html", "vocab.html", "cards.html", "spell.html",
+  "index.html", "vocab.html", "wordlist.html", "cards.html",
+  "vocabquiz.html", "mcq.html", "spell.html",
   "grammar.html", "unit.html", "wrongs.html",
   "css/style.css", "js/app.js", "js/units.js", "data/words.js",
   "data/grammar/u1.js", "data/grammar/u2.js", "data/grammar/u3.js", "data/grammar/u4.js",
@@ -9,7 +10,9 @@ const ASSETS = [
   "manifest.webmanifest", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png"
 ];
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache:"reload" 繞過瀏覽器 HTTP 快取，確保裝新版時抓到的是最新檔案
+  const fresh = ASSETS.map(u => new Request(u, {cache: "reload"}));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(fresh)).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(

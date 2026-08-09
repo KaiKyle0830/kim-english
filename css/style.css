@@ -105,6 +105,27 @@ button{font-family:inherit;font-size:1rem;border:none;background:none;color:inhe
 .review .tip{background:rgba(79,109,245,.08);border-radius:12px;padding:12px 14px;margin-top:14px;line-height:1.7;font-size:.95rem}
 .tablewrap{overflow-x:auto}
 
+/* ===== 單字列表 ===== */
+.wl-item{padding:14px 2px;border-bottom:1px solid var(--line)}
+.wl-item:last-child{border-bottom:none}
+.wl-head{display:flex;align-items:baseline;gap:8px}
+.wl-en{font-size:1.25rem;font-weight:800}
+.wl-pos{color:var(--muted);font-size:.8rem}
+.wl-zh{margin-left:auto;font-size:1rem;font-weight:600}
+.wl-speak{background:var(--bg);border-radius:999px;padding:5px 11px;font-size:.95rem;margin-left:6px}
+.wl-ex{margin-top:6px;font-size:.92rem;line-height:1.7;color:var(--muted);
+  border-left:3px solid var(--line);padding-left:10px}
+.wl-ex b{color:var(--text);font-weight:600}
+.wl-known{color:var(--good);font-size:.8rem;margin-left:4px}
+
+/* 模式選擇大按鈕 */
+.mode{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--card);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 18px;width:100%;margin-bottom:14px}
+.mode:active{transform:scale(.98)}
+.mode .emoji{font-size:2.4rem}
+.mode .t{font-weight:800;font-size:1.15rem}
+.mode .d{color:var(--muted);font-size:.88rem;text-align:center;line-height:1.6}
+
 /* spelling */
 .spell-input{width:100%;padding:14px;font-size:1.3rem;border-radius:14px;border:1.5px solid var(--line);
   background:var(--card);color:var(--text);text-align:center;letter-spacing:.05em}

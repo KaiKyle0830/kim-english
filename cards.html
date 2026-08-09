@@ -15,7 +15,7 @@
     <a class="back" id="backLink" href="vocab.html">‹</a>
     <div><h1 id="title">字卡</h1><div class="sub" id="subtitle"></div></div>
     <span class="spacer"></span>
-    <button id="spellLink" class="badge" style="border:none">✏️ 拼字測驗</button>
+    <button id="spellLink" class="badge" style="border:none">📝 考試</button>
   </div>
 
   <div id="stage">
@@ -26,6 +26,7 @@
           <div class="fc-word" id="enWord"></div>
           <div class="fc-pos" id="enPos"></div>
           <button class="fc-speak" id="speakBtn" aria-label="發音">🔊</button>
+          <div class="wl-ex" id="enEx" style="border:none;padding:0 10px;text-align:center"></div>
         </div>
         <div class="fc-mask" id="mask">
           <div class="fc-word" id="zhWord"></div>
@@ -73,7 +74,7 @@
         const v = getVocab(s.id);
         Object.keys(v.hard).forEach(i => {
           const w = s.words[+i];
-          if (w) queue.push({setId:s.id, idx:+i, en:w[0], zh:w[1], pos:w[2]});
+          if (w) queue.push({setId:s.id, idx:+i, en:w[0], zh:w[1], pos:w[2], ex:w[3]||""});
         });
       });
       queue = shuffle(queue);
@@ -91,12 +92,15 @@
     }
     const set = WORD_SETS.find(s => s.id === setId) || WORD_SETS[0];
     $("#title").textContent = `${set.icon} ${set.name}`;
-    $("#spellLink").onclick = () => location.href = `spell.html?set=${set.id}`;
+    $("#backLink").href = `wordlist.html?set=${set.id}`;
+    $("#doneBack").href = `wordlist.html?set=${set.id}`;
+    $("#doneBack").textContent = "回單字表";
+    $("#spellLink").onclick = () => location.href = `vocabquiz.html?set=${set.id}`;
     const v = getVocab(set.id);
     // 照字表順序出現（one→two→three），已認識的跳過；全會了就整組照順序重練
     const todo = [], all = [];
     set.words.forEach((w, i) => {
-      const item = {setId:set.id, idx:i, en:w[0], zh:w[1], pos:w[2]};
+      const item = {setId:set.id, idx:i, en:w[0], zh:w[1], pos:w[2], ex:w[3]||""};
       all.push(item);
       if (!v.known[i]) todo.push(item);
     });
@@ -158,6 +162,7 @@
     $("#zhPos").textContent = item.pos;
     $("#enWord").textContent = item.en;
     $("#enPos").textContent = item.pos;
+    $("#enEx").textContent = item.ex;
     close(false);
   }
   function mark(known){

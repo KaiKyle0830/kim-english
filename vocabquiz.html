@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>單字考試</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" id="backLink" href="index.html">‹</a>
+    <div><h1>📝 單字考試</h1><div class="sub" id="subtitle">先選考試方式</div></div>
+  </div>
+
+  <!-- 選模式 -->
+  <div id="modeView">
+    <button class="mode" data-mode="mcq">
+      <span class="emoji">🔤</span>
+      <span class="t">選擇題</span>
+      <span class="d">看中文選英文、看英文選中文<br>四選一，適合剛背完檢查</span>
+    </button>
+    <button class="mode" data-mode="spell">
+      <span class="emoji">✏️</span>
+      <span class="t">拼字題</span>
+      <span class="d">看中文把英文拼出來<br>比較難，檢驗是不是真的會寫</span>
+    </button>
+  </div>
+
+  <!-- 選主題 -->
+  <div id="setView" class="hidden">
+    <div class="card" id="setList"></div>
+  </div>
+</main>
+<script src="data/words.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const preset = qs("set");
+  let mode = null;
+
+  if (preset){
+    const s = WORD_SETS.find(x => x.id === preset);
+    if (s){
+      $("#subtitle").textContent = `${s.icon} ${s.name}・選考試方式`;
+      $("#backLink").href = `wordlist.html?set=${s.id}`;
+    }
+  }
+
+  function go(m, setId){
+    location.href = (m === "mcq" ? "mcq.html?set=" : "spell.html?set=") + setId;
+  }
+
+  $$(".mode").forEach(b => b.onclick = () => {
+    mode = b.dataset.mode;
+    if (preset){ go(mode, preset); return; }
+    // 沒指定主題 → 進到主題列表
+    $("#modeView").classList.add("hidden");
+    $("#setView").classList.remove("hidden");
+    $("#subtitle").textContent = (mode === "mcq" ? "選擇題" : "拼字題") + "・選一個主題";
+    renderSets();
+  });
+
+  function renderSets(){
+    const goal = getGoalSet();
+    $("#setList").innerHTML = WORD_SETS.map(s => {
+      const known = Object.keys(getVocab(s.id).known).length;
+      return `<button class="row setRow" data-id="${s.id}" style="width:100%;text-align:left">
+        <span style="font-size:1.5rem">${s.icon}</span>
+        <span style="flex:1"><b>${s.name}</b>${s.id===goal?' <span class="badge" style="background:rgba(79,109,245,.15);color:var(--accent)">🎯 目標</span>':''}</span>
+        <span class="badge">${known}/${s.words.length}</span>
+      </button>`;
+    }).join("");
+    $$(".setRow").forEach(b => b.onclick = () => go(mode, b.dataset.id));
+  }
+})();
+</script>
+</body>
+</html>

@@ -31,8 +31,13 @@
   </div>
 
   <a class="bigbtn" href="vocab.html">
-    <span class="emoji">🃏</span>
-    <span><span class="t">背單字</span><br><span class="d">滑動字卡・國中基礎 1200 字</span></span>
+    <span class="emoji">📚</span>
+    <span><span class="t">學單字</span><br><span class="d">單字表＋例句・國中基礎 1200 字</span></span>
+    <span class="go">›</span>
+  </a>
+  <a class="bigbtn" href="vocabquiz.html">
+    <span class="emoji">📝</span>
+    <span><span class="t">單字考試</span><br><span class="d">選擇題或拼字題，檢驗背得如何</span></span>
     <span class="go">›</span>
   </a>
   <a class="bigbtn" href="grammar.html">
@@ -66,7 +71,7 @@
     $("#vocabStat").textContent = `認識 ${known} / ${goal.words.length} 字`;
     $("#vocabBar").style.width = (known/goal.words.length*100).toFixed(0) + "%";
   } else {
-    $("#vocabStat").textContent = "到「背單字」選一個目標單元 🎯";
+    $("#vocabStat").textContent = "到「學單字」選一個目標單元 🎯";
     $("#vocabBar").style.width = "0%";
   }
   let hard = 0;

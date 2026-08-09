@@ -45,10 +45,13 @@
 <script>
 (function(){
   const set = WORD_SETS.find(s => s.id === qs("set")) || WORD_SETS[0];
-  $("#title").textContent = `✏️ 拼字測驗`;
+  $("#title").textContent = `✏️ 拼字題`;
   $("#subtitle").textContent = `${set.icon} ${set.name}`;
+  $("#backLink").href = `vocabquiz.html?set=${set.id}`;
+  $("#doneBack").href = `wordlist.html?set=${set.id}`;
+  $("#doneBack").textContent = "回單字表";
   const N = 10;
-  const quiz = sampleN(set.words.map((w,i)=>({en:w[0],zh:w[1],pos:w[2],idx:i})), N);
+  const quiz = sampleN(set.words.map((w,i)=>({en:w[0],zh:w[1],pos:w[2],ex:w[3]||"",idx:i})), N);
   let cur = 0, right = 0, checked = false;
 
   function norm(s){ return s.trim().toLowerCase().replace(/\s+/g," "); }
@@ -72,17 +75,19 @@
     const fb = $("#feedback");
     fb.classList.remove("hidden","good","bad");
     fb.classList.add(ok ? "good" : "bad");
-    fb.innerHTML = ok
-      ? `✅ 正確！<b>${esc(w.en)}</b>`
-      : `❌ 正確答案是 <b>${esc(w.en)}</b>`;
-    if (ok) right++;
-    else {
+    fb.innerHTML = (ok ? `✅ 正確！<b>${esc(w.en)}</b>` : `❌ 正確答案是 <b>${esc(w.en)}</b>`)
+      + (w.ex ? `<br><span class="muted">${esc(w.ex)}</span>` : "");
+    const v = getVocab(set.id);
+    if (ok){
+      right++;
+      v.known[w.idx] = true;
+      delete v.hard[w.idx];
+    } else {
       // 拼錯的字加入不熟清單
-      const v = getVocab(set.id);
       v.hard[w.idx] = true;
       delete v.known[w.idx];
-      setVocab(set.id, v);
     }
+    setVocab(set.id, v);
     speak(w.en);
     checked = true;
     $("#input").disabled = true;

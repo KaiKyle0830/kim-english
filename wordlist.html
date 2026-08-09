@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>單字表</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" href="vocab.html">‹</a>
+    <div><h1 id="title">單字表</h1><div class="sub" id="subtitle"></div></div>
+  </div>
+
+  <a class="btn primary" id="cardBtn">🃏 Word Card（字卡練習）</a>
+  <div style="height:10px"></div>
+  <a class="btn ghost" id="quizBtn">📝 這個主題的單字考試</a>
+
+  <div class="card" style="margin-top:14px">
+    <div class="muted small center" style="margin-bottom:6px">點 🔊 聽單字，點例句聽整句</div>
+    <div id="list"></div>
+  </div>
+</main>
+<script src="data/words.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const set = WORD_SETS.find(s => s.id === qs("set")) || WORD_SETS[0];
+  const v = getVocab(set.id);
+  const known = Object.keys(v.known).length;
+  $("#title").textContent = `${set.icon} ${set.name}`;
+  $("#subtitle").textContent = `共 ${set.words.length} 個字・已認識 ${known} 個`;
+  $("#cardBtn").href = `cards.html?set=${set.id}`;
+  $("#quizBtn").href = `vocabquiz.html?set=${set.id}`;
+
+  // 例句「English. 中文。」拆成兩行顯示
+  function splitEx(ex){
+    const m = ex.match(/^(.*?)\s*([一-鿿，。！？].*)$/);
+    return m ? [m[1], m[2]] : [ex, ""];
+  }
+
+  $("#list").innerHTML = set.words.map((w, i) => {
+    const [en, zh] = splitEx(w[3] || "");
+    return `<div class="wl-item">
+      <div class="wl-head">
+        <span class="wl-en">${esc(w[0])}</span>
+        <span class="wl-pos">${esc(w[2])}</span>
+        ${v.known[i] ? '<span class="wl-known">✓</span>' : ''}
+        <span class="wl-zh">${esc(w[1])}</span>
+        <button class="wl-speak" data-say="${esc(w[0])}" aria-label="唸單字">🔊</button>
+      </div>
+      <div class="wl-ex" data-say="${esc(en)}"><b>${esc(en)}</b><br>${esc(zh)}</div>
+    </div>`;
+  }).join("");
+
+  $$("[data-say]").forEach(el => el.onclick = e => {
+    e.preventDefault();
+    speak(el.dataset.say);
+  });
+})();
+</script>
+</body>
+</html>
