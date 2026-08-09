@@ -7,11 +7,11 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "data", "grammar")
 
 # ---------- 共用資料 ----------
 SUBJ_I   = ["I"]
-SUBJ_S3  = ["He", "She", "It", "Tom", "Mary", "Kim", "My father", "His sister",
+SUBJ_S3  = ["He", "She", "It", "Tom", "Mary", "Kin", "My father", "His sister",
             "The dog", "That boy", "Our teacher", "The baby", "Mr. Wang", "My best friend",
             "The cat", "This girl", "Her brother", "Amy", "David", "The old man"]
 SUBJ_PL  = ["We", "They", "You", "Tom and Mary", "The students", "My parents",
-            "Her sisters", "The dogs", "Those boys", "The children", "Kim and I",
+            "Her sisters", "The dogs", "Those boys", "The children", "Kin and I",
             "The girls", "My classmates", "These people"]
 
 ADJS = ["happy", "tall", "hungry", "tired", "busy", "cute", "smart", "angry",
@@ -381,7 +381,7 @@ def unit6():
     # could（過去能力）
     for s in SUBJ_S3:
         act = random.choice(["swim","ride a bike","read","write his name","speak English","play the piano","count to 100"])
-        pool.append(mk(f"{s} ___ {act} when {'she' if s in ('She','Mary','Amy','Kim','His sister','This girl') else 'he'} was five.",
+        pool.append(mk(f"{s} ___ {act} when {'she' if s in ('She','Mary','Amy','Kin','His sister','This girl') else 'he'} was five.",
                        "could", ["can","must","should"],
                        "when ... was five 表示過去，能力的過去式用 could。"))
     # have to
@@ -428,7 +428,7 @@ def unit7():
     pairs = [("Tom","his brother"),("Mary","her sister"),("This book","that one"),
              ("My bag","yours"),("The MRT","the bus"),("Summer","spring"),
              ("This question","the last one"),("Her hair","mine"),("The red car","the blue one"),
-             ("Kim","his classmate")]
+             ("Kin","his classmate")]
     groups = ["in his class","in her family","of the three","in our school","in Taiwan","of all","on the team","in the world"]
     for base, cmp_, sup in ADJC:
       for rep in range(4):
@@ -442,7 +442,7 @@ def unit7():
                        [base, sup, wrong_cmp],
                        f"有 than（比）要用比較級；{base} 的比較級是 {cmp_}（{note}）。"))
         g = random.choice(groups)
-        s = random.choice(["Tom","Mary","This one","That building","Kim","My father","This movie"])
+        s = random.choice(["Tom","Mary","This one","That building","Kin","My father","This movie"])
         wrong_sup = (base + "est") if sup.startswith("most") else ("most " + base)
         pool.append(mk(f"{s} is the ___ ({base}) {g}.", sup,
                        [base, cmp_, wrong_sup],
@@ -475,7 +475,7 @@ def unit8():
         ("Who", "is that tall girl", "She is my sister.", "問「人」用 Who。"),
         ("Who", "teaches you English", "Mr. Lin does.", "問「人」用 Who。"),
         ("Who", "is your favorite singer", "Jay Chou.", "問「人」用 Who。"),
-        ("What", "is your name", "My name is Kim.", "問「什麼」用 What。"),
+        ("What", "is your name", "My name is Kin.", "問「什麼」用 What。"),
         ("What", "time is it", "It's ten o'clock.", "What time 問「幾點」。"),
         ("What", "day is today", "It's Friday.", "What day 問「星期幾」。"),
         ("What", "color do you like", "I like blue.", "What color 問「顏色」。"),
