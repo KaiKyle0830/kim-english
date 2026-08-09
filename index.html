@@ -21,7 +21,7 @@
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <b>單字進度</b><span class="muted small" id="vocabStat">–</span>
+      <b id="vocabLabel">單字目標</b><span class="muted small" id="vocabStat">–</span>
     </div>
     <div class="pbar"><i id="vocabBar" style="width:0%"></i></div>
     <div style="display:flex;justify-content:space-between;margin:16px 0 8px">
@@ -56,16 +56,21 @@
 <script src="js/app.js"></script>
 <script>
 (function(){
-  // 單字進度
-  let total = 0, known = 0, hard = 0;
-  WORD_SETS.forEach(s => {
-    total += s.words.length;
-    const v = getVocab(s.id);
-    known += Object.keys(v.known).length;
-    hard  += Object.keys(v.hard).length;
-  });
-  $("#vocabStat").textContent = `認識 ${known} / ${total} 字`;
-  $("#vocabBar").style.width = total ? (known/total*100).toFixed(1) + "%" : "0%";
+  // 單字目標進度（只看選定的目標單元，避免 1200 字看不到終點）
+  const goalId = getGoalSet();
+  const goal = WORD_SETS.find(s => s.id === goalId);
+  if (goal){
+    const v = getVocab(goal.id);
+    const known = Object.keys(v.known).length;
+    $("#vocabLabel").textContent = `單字目標｜${goal.icon} ${goal.name}`;
+    $("#vocabStat").textContent = `認識 ${known} / ${goal.words.length} 字`;
+    $("#vocabBar").style.width = (known/goal.words.length*100).toFixed(0) + "%";
+  } else {
+    $("#vocabStat").textContent = "到「背單字」選一個目標單元 🎯";
+    $("#vocabBar").style.width = "0%";
+  }
+  let hard = 0;
+  WORD_SETS.forEach(s => { hard += Object.keys(getVocab(s.id).hard).length; });
   $("#hardCount").textContent = hard ? `${hard} 個還不熟的單字` : "還不熟的單字會收集在這裡";
 
   // 文法進度（拿過 80 分以上算通過）

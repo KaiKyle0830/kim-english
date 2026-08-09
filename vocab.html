@@ -13,7 +13,7 @@
 <main>
   <div class="top">
     <a class="back" href="index.html">‹</a>
-    <div><h1>🃏 背單字</h1><div class="sub">選一組開始，遮版往左滑看英文</div></div>
+    <div><h1>🃏 背單字</h1><div class="sub">點單元開始練習；點 🎯 設為目標</div></div>
   </div>
   <div class="card" id="setList"></div>
 </main>
@@ -22,19 +22,31 @@
 <script>
 (function(){
   const list = $("#setList");
-  list.innerHTML = WORD_SETS.map(s => {
-    const v = getVocab(s.id);
-    const known = Object.keys(v.known).length;
-    const done = known >= s.words.length;
-    return `<a class="row" href="cards.html?set=${s.id}">
-      <span style="font-size:1.5rem">${s.icon}</span>
-      <span style="flex:1">
-        <b>${s.name}</b>
-        <div class="pbar" style="margin-top:6px"><i style="width:${(known/s.words.length*100).toFixed(0)}%"></i></div>
-      </span>
-      <span class="badge ${done?"done":""}">${known}/${s.words.length}</span>
-    </a>`;
-  }).join("");
+  function render(){
+    const goal = getGoalSet();
+    list.innerHTML = WORD_SETS.map(s => {
+      const v = getVocab(s.id);
+      const known = Object.keys(v.known).length;
+      const done = known >= s.words.length;
+      const isGoal = s.id === goal;
+      return `<a class="row" href="cards.html?set=${s.id}" ${isGoal?'style="background:rgba(79,109,245,.07);border-radius:12px"':''}>
+        <span style="font-size:1.5rem">${s.icon}</span>
+        <span style="flex:1">
+          <b>${s.name}</b>${isGoal?' <span class="badge" style="background:rgba(79,109,245,.15);color:var(--accent)">🎯 目標</span>':''}
+          <div class="pbar" style="margin-top:6px"><i style="width:${(known/s.words.length*100).toFixed(0)}%"></i></div>
+        </span>
+        <span class="badge ${done?"done":""}">${known}/${s.words.length}</span>
+        <button class="goalBtn" data-id="${s.id}" aria-label="設為目標"
+          style="font-size:1.2rem;padding:8px;opacity:${isGoal?1:.35}">🎯</button>
+      </a>`;
+    }).join("");
+    $$(".goalBtn").forEach(b => b.onclick = e => {
+      e.preventDefault(); e.stopPropagation();
+      setGoalSet(b.dataset.id === getGoalSet() ? null : b.dataset.id);
+      render();
+    });
+  }
+  render();
 })();
 </script>
 </body>

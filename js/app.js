@@ -52,6 +52,13 @@ function getWrongs(unitId){
   const st = loadStore();
   return (st.wrongs && st.wrongs[unitId]) || [];
 }
+// 目標單字單元
+function getGoalSet(){ return loadStore().goalSet || null; }
+function setGoalSet(setId){
+  const st = loadStore();
+  st.goalSet = setId;
+  saveStore(st);
+}
 
 // ---------- 發音 (Web Speech API) ----------
 let _voice = null;

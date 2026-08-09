@@ -93,16 +93,14 @@
     $("#title").textContent = `${set.icon} ${set.name}`;
     $("#spellLink").onclick = () => location.href = `spell.html?set=${set.id}`;
     const v = getVocab(set.id);
-    // 順序：不熟的 → 沒看過的 → （都完成時）全部重練
-    const hard = [], unseen = [], rest = [];
+    // 照字表順序出現（one→two→three），已認識的跳過；全會了就整組照順序重練
+    const todo = [], all = [];
     set.words.forEach((w, i) => {
       const item = {setId:set.id, idx:i, en:w[0], zh:w[1], pos:w[2]};
-      if (v.hard[i]) hard.push(item);
-      else if (!v.known[i]) unseen.push(item);
-      else rest.push(item);
+      all.push(item);
+      if (!v.known[i]) todo.push(item);
     });
-    queue = shuffle(hard).concat(shuffle(unseen));
-    if (!queue.length) queue = shuffle(rest);   // 全會了 → 整組復習
+    queue = todo.length ? todo : all;
     $("#subtitle").textContent = `這一輪 ${queue.length} 張字卡`;
     return true;
   }
