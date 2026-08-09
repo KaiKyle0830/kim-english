@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Kim 的英文教室</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <h1>👋 Hi, Kim!</h1>
+      <div class="sub">今天也一起學英文吧</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <b>單字進度</b><span class="muted small" id="vocabStat">–</span>
+    </div>
+    <div class="pbar"><i id="vocabBar" style="width:0%"></i></div>
+    <div style="display:flex;justify-content:space-between;margin:16px 0 8px">
+      <b>文法測驗</b><span class="muted small" id="quizStat">–</span>
+    </div>
+    <div class="pbar"><i id="quizBar" style="width:0%"></i></div>
+  </div>
+
+  <a class="bigbtn" href="vocab.html">
+    <span class="emoji">🃏</span>
+    <span><span class="t">背單字</span><br><span class="d">滑動字卡・國中基礎 1200 字</span></span>
+    <span class="go">›</span>
+  </a>
+  <a class="bigbtn" href="grammar.html">
+    <span class="emoji">📖</span>
+    <span><span class="t">學文法</span><br><span class="d">8 個單元・複習＋隨機 20 題</span></span>
+    <span class="go">›</span>
+  </a>
+  <a class="bigbtn" href="cards.html?mode=review">
+    <span class="emoji">⭐</span>
+    <span><span class="t">複習清單</span><br><span class="d" id="hardCount">還不熟的單字</span></span>
+    <span class="go">›</span>
+  </a>
+  <a class="bigbtn" href="wrongs.html">
+    <span class="emoji">📕</span>
+    <span><span class="t">錯題本</span><br><span class="d" id="wrongCount">答錯的文法題</span></span>
+    <span class="go">›</span>
+  </a>
+</main>
+<script src="data/words.js"></script>
+<script src="js/units.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  // 單字進度
+  let total = 0, known = 0, hard = 0;
+  WORD_SETS.forEach(s => {
+    total += s.words.length;
+    const v = getVocab(s.id);
+    known += Object.keys(v.known).length;
+    hard  += Object.keys(v.hard).length;
+  });
+  $("#vocabStat").textContent = `認識 ${known} / ${total} 字`;
+  $("#vocabBar").style.width = total ? (known/total*100).toFixed(1) + "%" : "0%";
+  $("#hardCount").textContent = hard ? `${hard} 個還不熟的單字` : "還不熟的單字會收集在這裡";
+
+  // 文法進度（拿過 80 分以上算通過）
+  let passed = 0;
+  UNITS.forEach(u => {
+    const h = getQuizHistory(u.id);
+    if (h.some(r => r.s / r.t >= 0.8)) passed++;
+  });
+  $("#quizStat").textContent = `${passed} / ${UNITS.length} 單元通過（80 分）`;
+  $("#quizBar").style.width = (passed/UNITS.length*100) + "%";
+
+  // 錯題數
+  let wrongs = 0;
+  UNITS.forEach(u => wrongs += getWrongs(u.id).length);
+  $("#wrongCount").textContent = wrongs ? `${wrongs} 題待重練` : "答錯的文法題會收集在這裡";
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>背單字</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" href="index.html">‹</a>
+    <div><h1>🃏 背單字</h1><div class="sub">選一組開始，遮版往左滑看英文</div></div>
+  </div>
+  <div class="card" id="setList"></div>
+</main>
+<script src="data/words.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const list = $("#setList");
+  list.innerHTML = WORD_SETS.map(s => {
+    const v = getVocab(s.id);
+    const known = Object.keys(v.known).length;
+    const done = known >= s.words.length;
+    return `<a class="row" href="cards.html?set=${s.id}">
+      <span style="font-size:1.5rem">${s.icon}</span>
+      <span style="flex:1">
+        <b>${s.name}</b>
+        <div class="pbar" style="margin-top:6px"><i style="width:${(known/s.words.length*100).toFixed(0)}%"></i></div>
+      </span>
+      <span class="badge ${done?"done":""}">${known}/${s.words.length}</span>
+    </a>`;
+  }).join("");
+})();
+</script>
+</body>
+</html>

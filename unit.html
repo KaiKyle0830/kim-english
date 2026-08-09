@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>文法單元</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" id="backLink" href="grammar.html">‹</a>
+    <div><h1 id="title"></h1><div class="sub" id="subtitle"></div></div>
+  </div>
+
+  <!-- 複習內容 -->
+  <div id="reviewView">
+    <div class="card review tablewrap" id="reviewContent"></div>
+    <button class="btn primary" id="btnStart">開始測驗（隨機 20 題）</button>
+    <div style="height:10px"></div>
+    <button class="btn ghost hidden" id="btnWrongs"></button>
+  </div>
+
+  <!-- 測驗 -->
+  <div id="quizView" class="hidden">
+    <div class="card">
+      <div class="q-num" id="qNum"></div>
+      <div class="q-text" id="qText"></div>
+      <div id="opts"></div>
+      <div id="explain" class="explain hidden"></div>
+      <button class="btn primary hidden" id="btnNext">下一題</button>
+    </div>
+  </div>
+
+  <!-- 結果 -->
+  <div id="resultView" class="hidden">
+    <div class="card center">
+      <div style="font-size:3rem" id="resEmoji"></div>
+      <div class="score-big" id="resScore"></div>
+      <div class="score-sub" id="resSub"></div>
+      <button class="btn primary" onclick="location.reload()">再測一次（重新抽題）</button>
+      <div style="height:10px"></div>
+      <a class="btn ghost" href="grammar.html">回單元列表</a>
+    </div>
+    <div class="card hidden" id="resWrongs"></div>
+  </div>
+</main>
+<script src="js/units.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const uid = qs("u") || "u1";
+  const mode = qs("mode");   // "wrongs" = 只練錯題
+  const unit = UNITS.find(u => u.id === uid) || UNITS[0];
+  $("#title").textContent = `${unit.icon} Unit ${unit.no}｜${unit.name}`;
+  $("#subtitle").textContent = unit.brief;
+  $("#reviewContent").innerHTML = unit.review;
+
+  // 動態載入該單元題庫
+  const sc = document.createElement("script");
+  sc.src = `data/grammar/${unit.id}.js`;
+  sc.onload = init;
+  document.body.appendChild(sc);
+
+  let bank = [], quiz = [], cur = 0, score = 0, wrongIdx = [];
+
+  function init(){
+    bank = window.GRAMMAR_BANKS[unit.id] || [];
+    const wrongs = getWrongs(unit.id);
+    if (wrongs.length){
+      $("#btnWrongs").classList.remove("hidden");
+      $("#btnWrongs").textContent = `📕 只練錯題（${wrongs.length} 題）`;
+      $("#btnWrongs").onclick = () => startQuiz(true);
+    }
+    if (mode === "wrongs" && wrongs.length){ startQuiz(true); }
+  }
+
+  function startQuiz(onlyWrongs){
+    const wrongs = getWrongs(unit.id);
+    let idxPool;
+    if (onlyWrongs && wrongs.length){
+      idxPool = sampleN(wrongs, 20);
+      $("#subtitle").textContent = "錯題重練";
+    } else {
+      idxPool = sampleN([...bank.keys()], 20);
+    }
+    quiz = idxPool.map(i => ({...bank[i], bankIdx:i}));
+    cur = 0; score = 0; wrongIdx = [];
+    $("#reviewView").classList.add("hidden");
+    $("#quizView").classList.remove("hidden");
+    renderQ();
+  }
+
+  function renderQ(){
+    const q = quiz[cur];
+    $("#qNum").textContent = `第 ${cur+1} / ${quiz.length} 題`;
+    $("#qText").textContent = q.q;
+    $("#explain").classList.add("hidden");
+    $("#btnNext").classList.add("hidden");
+    $("#opts").innerHTML = q.opts.map((o,i) =>
+      `<button class="opt" data-i="${i}">${"ABCD"[i]}. ${esc(o)}</button>`).join("");
+    $$(".opt").forEach(b => b.onclick = () => answer(+b.dataset.i));
+  }
+
+  function answer(i){
+    const q = quiz[cur];
+    const ok = i === q.a;
+    $$(".opt").forEach((b,bi) => {
+      b.disabled = true;
+      if (bi === q.a) b.classList.add("correct");
+      else if (bi === i) b.classList.add("wrong");
+    });
+    const ex = $("#explain");
+    ex.classList.remove("hidden","good","bad");
+    ex.classList.add(ok ? "good" : "bad");
+    ex.innerHTML = (ok ? "✅ 答對了！" : "❌ 答錯了。") + "<br>" + esc(q.exp);
+    if (ok){
+      score++;
+      removeWrong(unit.id, q.bankIdx);   // 答對就從錯題本移除
+    } else {
+      wrongIdx.push(q.bankIdx);
+    }
+    $("#btnNext").textContent = cur === quiz.length-1 ? "看成績" : "下一題";
+    $("#btnNext").classList.remove("hidden");
+  }
+
+  $("#btnNext").onclick = () => {
+    cur++;
+    if (cur >= quiz.length){ finish(); return; }
+    renderQ();
+  };
+
+  function finish(){
+    const pct = Math.round(score/quiz.length*100);
+    addQuizResult(unit.id, score, quiz.length);
+    addWrongs(unit.id, wrongIdx);
+    $("#quizView").classList.add("hidden");
+    $("#resultView").classList.remove("hidden");
+    $("#resEmoji").textContent = pct >= 90 ? "🏆" : pct >= 80 ? "🎉" : pct >= 60 ? "💪" : "📖";
+    $("#resScore").textContent = `${pct} 分`;
+    $("#resSub").textContent = `答對 ${score} / ${quiz.length} 題` +
+      (pct >= 80 ? "，通過本單元！" : "，再複習一下重點吧");
+    if (wrongIdx.length){
+      const rw = $("#resWrongs");
+      rw.classList.remove("hidden");
+      rw.innerHTML = `<b>這次答錯的題目</b>` + wrongIdx.map(i => {
+        const q = bank[i];
+        return `<div class="explain bad" style="margin-top:10px">${esc(q.q)}<br>
+          正解：<b>${esc(q.opts[q.a])}</b><br><span class="muted small">${esc(q.exp)}</span></div>`;
+      }).join("");
+    }
+  }
+
+  $("#btnStart").onclick = () => startQuiz(false);
+})();
+</script>
+</body>
+</html>

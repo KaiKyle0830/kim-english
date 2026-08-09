@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>字卡</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" id="backLink" href="vocab.html">‹</a>
+    <div><h1 id="title">字卡</h1><div class="sub" id="subtitle"></div></div>
+    <span class="spacer"></span>
+    <button id="spellLink" class="badge" style="border:none">✏️ 拼字測驗</button>
+  </div>
+
+  <div id="stage">
+    <div class="fc-count" id="counter"></div>
+    <div class="fc-stage">
+      <div class="fc-card" id="card">
+        <div class="fc-face" id="faceEn">
+          <div class="fc-word" id="enWord"></div>
+          <div class="fc-pos" id="enPos"></div>
+          <button class="fc-speak" id="speakBtn" aria-label="發音">🔊</button>
+        </div>
+        <div class="fc-mask" id="mask">
+          <div class="fc-word" id="zhWord"></div>
+          <div class="fc-pos" id="zhPos"></div>
+          <span class="knob"></span>
+          <div class="hint">← 把遮版往左滑，看英文</div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-actions">
+      <button class="btn no" id="btnNo">✗ 不認識</button>
+      <button class="btn yes" id="btnYes">✓ 認識</button>
+    </div>
+  </div>
+
+  <div id="done" class="hidden">
+    <div class="card center">
+      <div style="font-size:3rem">🎉</div>
+      <div class="score-big" id="doneStat"></div>
+      <div class="score-sub" id="doneSub"></div>
+      <button class="btn primary" id="btnHard">再練不熟的單字</button>
+      <div style="height:10px"></div>
+      <a class="btn ghost" id="doneBack" href="vocab.html">回單字列表</a>
+    </div>
+  </div>
+</main>
+<script src="data/words.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const mode = qs("mode");
+  const setId = qs("set");
+  let queue = [];       // [{setId, idx, en, zh, pos}]
+  let cur = 0, knownCnt = 0, hardCnt = 0;
+  let revealed = false;
+
+  function buildQueue(){
+    if (mode === "review"){
+      // 全部字集中「不熟」的字
+      $("#title").textContent = "⭐ 複習清單";
+      $("#backLink").href = "index.html";
+      $("#doneBack").href = "index.html";
+      queue = [];
+      WORD_SETS.forEach(s => {
+        const v = getVocab(s.id);
+        Object.keys(v.hard).forEach(i => {
+          const w = s.words[+i];
+          if (w) queue.push({setId:s.id, idx:+i, en:w[0], zh:w[1], pos:w[2]});
+        });
+      });
+      queue = shuffle(queue);
+      $("#subtitle").textContent = queue.length ? `${queue.length} 個還不熟的單字` : "";
+      $("#spellLink").classList.add("hidden");
+      if (!queue.length){
+        $("#stage").classList.add("hidden");
+        $("#done").classList.remove("hidden");
+        $("#doneStat").textContent = "太棒了";
+        $("#doneSub").textContent = "目前沒有標記「不認識」的單字";
+        $("#btnHard").classList.add("hidden");
+        return false;
+      }
+      return true;
+    }
+    const set = WORD_SETS.find(s => s.id === setId) || WORD_SETS[0];
+    $("#title").textContent = `${set.icon} ${set.name}`;
+    $("#spellLink").onclick = () => location.href = `spell.html?set=${set.id}`;
+    const v = getVocab(set.id);
+    // 順序：不熟的 → 沒看過的 → （都完成時）全部重練
+    const hard = [], unseen = [], rest = [];
+    set.words.forEach((w, i) => {
+      const item = {setId:set.id, idx:i, en:w[0], zh:w[1], pos:w[2]};
+      if (v.hard[i]) hard.push(item);
+      else if (!v.known[i]) unseen.push(item);
+      else rest.push(item);
+    });
+    queue = shuffle(hard).concat(shuffle(unseen));
+    if (!queue.length) queue = shuffle(rest);   // 全會了 → 整組復習
+    $("#subtitle").textContent = `這一輪 ${queue.length} 張字卡`;
+    return true;
+  }
+
+  // ---------- 遮版拖曳 ----------
+  const mask = $("#mask"), card = $("#card");
+  const PEEK = 36;   // 打開後左側留下的把手寬度
+  let startX = 0, baseX = 0, curX = 0, dragging = false, moved = false;
+
+  function maxSlide(){ return card.clientWidth - PEEK; }
+  function setX(x, anim){
+    curX = Math.min(0, Math.max(-maxSlide(), x));
+    mask.classList.toggle("anim", !!anim);
+    mask.style.transform = `translateX(${curX}px)`;
+  }
+  function open(anim=true){
+    setX(-maxSlide(), anim);
+    if (!revealed){
+      revealed = true;
+      speak(queue[cur].en);
+    }
+  }
+  function close(anim=true){ setX(0, anim); revealed = false; }
+
+  mask.addEventListener("pointerdown", e => {
+    dragging = true; moved = false;
+    startX = e.clientX; baseX = curX;
+    mask.setPointerCapture(e.pointerId);
+    mask.classList.remove("anim");
+  });
+  mask.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 6) moved = true;
+    setX(baseX + dx, false);
+  });
+  mask.addEventListener("pointerup", e => {
+    if (!dragging) return;
+    dragging = false;
+    if (!moved){
+      // 輕點＝切換
+      (curX < -maxSlide()/2) ? close() : open();
+      return;
+    }
+    // 依放開位置吸附
+    (curX < -maxSlide()*0.35) ? open() : close();
+  });
+  mask.addEventListener("pointercancel", () => { dragging = false; (curX < -maxSlide()*0.35) ? open() : close(); });
+
+  // ---------- 卡片流程 ----------
+  function render(){
+    const item = queue[cur];
+    $("#counter").textContent = `${cur+1} / ${queue.length}`;
+    $("#zhWord").textContent = item.zh;
+    $("#zhPos").textContent = item.pos;
+    $("#enWord").textContent = item.en;
+    $("#enPos").textContent = item.pos;
+    close(false);
+  }
+  function mark(known){
+    const item = queue[cur];
+    const v = getVocab(item.setId);
+    if (known){
+      v.known[item.idx] = true;
+      delete v.hard[item.idx];
+      knownCnt++;
+    } else {
+      v.hard[item.idx] = true;
+      delete v.known[item.idx];
+      hardCnt++;
+    }
+    setVocab(item.setId, v);
+    next();
+  }
+  function next(){
+    cur++;
+    if (cur >= queue.length){ finish(); return; }
+    render();
+  }
+  function finish(){
+    $("#stage").classList.add("hidden");
+    $("#done").classList.remove("hidden");
+    $("#doneStat").textContent = `${knownCnt} ✓ / ${hardCnt} ✗`;
+    $("#doneSub").textContent = hardCnt
+      ? `有 ${hardCnt} 個字標記了不認識，再練一次吧！`
+      : "這一輪全部認識，太厲害了！";
+    if (!hardCnt) $("#btnHard").classList.add("hidden");
+  }
+
+  $("#btnYes").onclick = () => mark(true);
+  $("#btnNo").onclick = () => mark(false);
+  $("#speakBtn").onclick = e => { e.stopPropagation(); speak(queue[cur].en); };
+  $("#btnHard").onclick = () => location.reload();
+
+  if (buildQueue()) render();
+})();
+</script>
+</body>
+</html>
