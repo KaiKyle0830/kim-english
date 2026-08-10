@@ -36,22 +36,27 @@
   </div>
 </main>
 <script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
 <script src="js/app.js"></script>
 <script>
 (function(){
   const preset = qs("set");
+  const p = qs("p");
+  const suffix = p ? `&p=${p}` : "";
   let mode = null;
 
   if (preset){
-    const s = WORD_SETS.find(x => x.id === preset);
+    const s = findSet(preset);
     if (s){
-      $("#subtitle").textContent = `${s.icon} ${s.name}・選考試方式`;
-      $("#backLink").href = `wordlist.html?set=${s.id}`;
+      $("#subtitle").textContent = `${s.icon} ${s.name}` + (p ? ` 第 ${p} 篇` : "") + "・選考試方式";
+      $("#backLink").href = `wordlist.html?set=${s.id}${suffix}`;
     }
   }
 
   function go(m, setId){
-    location.href = (m === "mcq" ? "mcq.html?set=" : "spell.html?set=") + setId;
+    const sfx = (setId === preset) ? suffix : "";
+    location.href = (m === "mcq" ? "mcq.html?set=" : "spell.html?set=") + setId + sfx;
   }
 
   $$(".mode").forEach(b => b.onclick = () => {

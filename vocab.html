@@ -13,11 +13,13 @@
 <main>
   <div class="top">
     <a class="back" href="index.html">‹</a>
-    <div><h1>📚 學單字</h1><div class="sub">點主題看單字表；點 🎯 設為目標</div></div>
+    <div><h1>📚 學單字</h1><div class="sub">每篇 10 個字・點 🎯 設為目標</div></div>
   </div>
   <div class="card" id="setList"></div>
 </main>
 <script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
 <script src="js/app.js"></script>
 <script>
 (function(){
@@ -25,17 +27,19 @@
   function render(){
     const goal = getGoalSet();
     list.innerHTML = WORD_SETS.map(s => {
-      const v = getVocab(s.id);
-      const known = Object.keys(v.known).length;
-      const done = known >= s.words.length;
+      const learn = learnWords(s);
+      const known = knownIn(s.id, learn);
+      const done = known >= learn.length;
       const isGoal = s.id === goal;
-      return `<a class="row" href="wordlist.html?set=${s.id}" ${isGoal?'style="background:rgba(79,109,245,.07);border-radius:12px"':''}>
+      const lessons = lessonsOf(s).length;
+      return `<a class="row" href="lessons.html?set=${s.id}" ${isGoal?'style="background:rgba(79,109,245,.07);border-radius:12px"':''}>
         <span style="font-size:1.5rem">${s.icon}</span>
         <span style="flex:1">
           <b>${s.name}</b>${isGoal?' <span class="badge" style="background:rgba(79,109,245,.15);color:var(--accent)">🎯 目標</span>':''}
-          <div class="pbar" style="margin-top:6px"><i style="width:${(known/s.words.length*100).toFixed(0)}%"></i></div>
+          <div class="muted small" style="margin-top:2px">${lessons} 篇</div>
+          <div class="pbar" style="margin-top:6px"><i style="width:${(known/learn.length*100).toFixed(0)}%"></i></div>
         </span>
-        <span class="badge ${done?"done":""}">${known}/${s.words.length}</span>
+        <span class="badge ${done?"done":""}">${known}/${learn.length}</span>
         <button class="goalBtn" data-id="${s.id}" aria-label="設為目標"
           style="font-size:1.2rem;padding:8px;opacity:${isGoal?1:.35}">🎯</button>
       </a>`;

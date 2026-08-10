@@ -52,6 +52,40 @@ function getWrongs(unitId){
   const st = loadStore();
   return (st.wrongs && st.wrongs[unitId]) || [];
 }
+// ---------- 單字來源：主題單字集 ＋ 學校課本單元 ----------
+// 學校單元與主題單字集的資料結構相同，所以字卡／單字表／測驗都能共用
+function allSets(){
+  const school = (window.SCHOOL_UNITS || []).filter(u => u.ready);
+  return (window.WORD_SETS || []).concat(school);
+}
+function findSet(id){ return allSets().find(s => s.id === id) || null; }
+
+// ---------- 學單字：過濾簡單字、每 10 字分篇 ----------
+const LESSON_SIZE = 10;
+// 回傳這個主題「要學的字」（略過 EASY_WORDS），保留原始 index
+function learnWords(set){
+  const easy = new Set((window.EASY_WORDS && window.EASY_WORDS[set.id]) || []);
+  return set.words
+    .map((w, i) => ({en:w[0], zh:w[1], pos:w[2], ex:w[3] || "", idx:i}))
+    .filter(w => !easy.has(w.en));
+}
+// 切成每篇 10 個字
+function lessonsOf(set){
+  const all = learnWords(set), out = [];
+  for (let i = 0; i < all.length; i += LESSON_SIZE) out.push(all.slice(i, i + LESSON_SIZE));
+  return out;
+}
+// 指定第 n 篇（1 起算）；沒指定就回傳全部要學的字
+function lessonWords(set, p){
+  const ls = lessonsOf(set);
+  const n = parseInt(p, 10);
+  return (n >= 1 && n <= ls.length) ? ls[n-1] : learnWords(set);
+}
+function knownIn(setId, items){
+  const v = getVocab(setId);
+  return items.filter(w => v.known[w.idx]).length;
+}
+
 // 目標單字單元
 function getGoalSet(){ return loadStore().goalSet || null; }
 function setGoalSet(setId){

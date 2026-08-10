@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>選一篇</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" id="backLink" href="vocab.html">‹</a>
+    <div><h1 id="title"></h1><div class="sub" id="subtitle"></div></div>
+  </div>
+  <div class="card" id="list"></div>
+  <a class="btn ghost" id="quizBtn">📝 整個主題的單字考試</a>
+</main>
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const set = findSet(qs("set")) || WORD_SETS[0];
+  const lessons = lessonsOf(set);
+  const learn = learnWords(set);
+  $("#title").textContent = `${set.icon} ${set.name}`;
+  $("#subtitle").textContent = `${lessons.length} 篇・共 ${learn.length} 個字・已認識 ${knownIn(set.id, learn)} 個`;
+  $("#quizBtn").href = `vocabquiz.html?set=${set.id}`;
+  if (set.id.startsWith("s")) $("#backLink").href = `schoolunit.html?u=${set.id}`;
+
+  $("#list").innerHTML = lessons.map((ws, i) => {
+    const known = knownIn(set.id, ws);
+    const done = known >= ws.length;
+    const preview = ws.slice(0,3).map(w => w.en).join("、") + (ws.length > 3 ? "…" : "");
+    return `<a class="row" href="wordlist.html?set=${set.id}&p=${i+1}">
+      <span style="font-size:1.2rem;width:2.2rem;text-align:center">${done ? "✅" : "📄"}</span>
+      <span style="flex:1">
+        <b>第 ${i+1} 篇</b>　<span class="muted small">${ws.length} 個字</span>
+        <div class="muted small" style="margin-top:2px">${esc(preview)}</div>
+      </span>
+      <span class="badge ${done ? "done" : ""}">${known}/${ws.length}</span>
+    </a>`;
+  }).join("");
+})();
+</script>
+</body>
+</html>

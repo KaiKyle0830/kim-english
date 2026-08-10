@@ -41,17 +41,23 @@
   </div>
 </main>
 <script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
 <script src="js/app.js"></script>
 <script>
 (function(){
-  const set = WORD_SETS.find(s => s.id === qs("set")) || WORD_SETS[0];
+  const set = findSet(qs("set")) || WORD_SETS[0];
+  const p = qs("p");
+  const suffix = p ? `&p=${p}` : "";
   $("#title").textContent = `✏️ 拼字題`;
-  $("#subtitle").textContent = `${set.icon} ${set.name}`;
-  $("#backLink").href = `vocabquiz.html?set=${set.id}`;
-  $("#doneBack").href = `wordlist.html?set=${set.id}`;
+  $("#subtitle").textContent = `${set.icon} ${set.name}` + (p ? ` 第 ${p} 篇` : "");
+  $("#backLink").href = `vocabquiz.html?set=${set.id}${suffix}`;
+  $("#doneBack").href = `wordlist.html?set=${set.id}${suffix}`;
   $("#doneBack").textContent = "回單字表";
-  const N = 10;
-  const quiz = sampleN(set.words.map((w,i)=>({en:w[0],zh:w[1],pos:w[2],ex:w[3]||"",idx:i})), N);
+  const source = p
+    ? lessonWords(set, p)
+    : set.words.map((w,i)=>({en:w[0],zh:w[1],pos:w[2],ex:w[3]||"",idx:i}));
+  const quiz = sampleN(source, Math.min(10, source.length));
   let cur = 0, right = 0, checked = false;
 
   function norm(s){ return s.trim().toLowerCase().replace(/\s+/g," "); }

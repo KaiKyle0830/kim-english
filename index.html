@@ -32,12 +32,17 @@
 
   <a class="bigbtn" href="vocab.html">
     <span class="emoji">📚</span>
-    <span><span class="t">學單字</span><br><span class="d">單字表＋例句・國中基礎 1200 字</span></span>
+    <span><span class="t">學單字</span><br><span class="d">每篇 10 個字・單字表＋例句</span></span>
     <span class="go">›</span>
   </a>
   <a class="bigbtn" href="vocabquiz.html">
     <span class="emoji">📝</span>
     <span><span class="t">單字考試</span><br><span class="d">選擇題或拼字題，檢驗背得如何</span></span>
+    <span class="go">›</span>
+  </a>
+  <a class="bigbtn" href="school.html">
+    <span class="emoji">🎒</span>
+    <span><span class="t">學校進度</span><br><span class="d" id="schoolDesc">講義 Unit 1～6・段考複習</span></span>
     <span class="go">›</span>
   </a>
   <a class="bigbtn" href="grammar.html">
@@ -57,6 +62,8 @@
   </a>
 </main>
 <script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
 <script src="js/units.js"></script>
 <script src="js/app.js"></script>
 <script>
@@ -65,17 +72,21 @@
   const goalId = getGoalSet();
   const goal = WORD_SETS.find(s => s.id === goalId);
   if (goal){
-    const v = getVocab(goal.id);
-    const known = Object.keys(v.known).length;
+    const learn = learnWords(goal);
+    const known = knownIn(goal.id, learn);
     $("#vocabLabel").textContent = `單字目標｜${goal.icon} ${goal.name}`;
-    $("#vocabStat").textContent = `認識 ${known} / ${goal.words.length} 字`;
-    $("#vocabBar").style.width = (known/goal.words.length*100).toFixed(0) + "%";
+    $("#vocabStat").textContent = `認識 ${known} / ${learn.length} 字`;
+    $("#vocabBar").style.width = (known/learn.length*100).toFixed(0) + "%";
   } else {
     $("#vocabStat").textContent = "到「學單字」選一個目標單元 🎯";
     $("#vocabBar").style.width = "0%";
   }
   let hard = 0;
-  WORD_SETS.forEach(s => { hard += Object.keys(getVocab(s.id).hard).length; });
+  allSets().forEach(s => { hard += Object.keys(getVocab(s.id).hard).length; });
+  const ready = (window.SCHOOL_UNITS || []).filter(u => u.ready).length;
+  $("#schoolDesc").textContent = ready
+    ? `講義 Unit 1～6・已匯入 ${ready} 個單元`
+    : "講義 Unit 1～6・等老師匯入內容";
   $("#hardCount").textContent = hard ? `${hard} 個還不熟的單字` : "還不熟的單字會收集在這裡";
 
   // 文法進度（拿過 80 分以上算通過）

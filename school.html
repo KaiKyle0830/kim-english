@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>學校進度</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" href="index.html">‹</a>
+    <div><h1>🎒 學校進度</h1><div class="sub">這學期講義 Unit 1～6・段考複習用</div></div>
+  </div>
+  <div class="card" id="list"></div>
+  <div class="card muted small" id="note"></div>
+</main>
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const readyCount = SCHOOL_UNITS.filter(u => u.ready).length;
+
+  $("#list").innerHTML = SCHOOL_UNITS.map(u => {
+    if (!u.ready){
+      return `<div class="row" style="opacity:.45">
+        <span style="font-size:1.5rem">${u.icon}</span>
+        <span style="flex:1"><b>${u.name}</b>
+          <div class="muted small" style="margin-top:2px">尚未匯入講義內容</div></span>
+        <span class="badge">準備中</span>
+      </div>`;
+    }
+    const learn = learnWords(u);
+    const known = knownIn(u.id, learn);
+    return `<a class="row" href="schoolunit.html?u=${u.id}">
+      <span style="font-size:1.5rem">${u.icon}</span>
+      <span style="flex:1"><b>${u.name}</b>${u.topic ? `　<span class="muted small">${esc(u.topic)}</span>` : ""}
+        <div class="pbar" style="margin-top:6px"><i style="width:${learn.length ? (known/learn.length*100).toFixed(0) : 0}%"></i></div>
+      </span>
+      <span class="badge ${known >= learn.length && learn.length ? "done" : ""}">${known}/${learn.length}</span>
+    </a>`;
+  }).join("");
+
+  $("#note").innerHTML = readyCount
+    ? `已匯入 ${readyCount} 個單元。每個單元包含課本單字與該課的文法重點、練習題。`
+    : "老師還沒把講義內容匯入。拍好講義的單字表與文法主題後，這裡就會出現 Unit 1～6 的單字、文法複習和練習題。";
+})();
+</script>
+</body>
+</html>

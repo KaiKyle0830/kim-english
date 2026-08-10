@@ -38,16 +38,23 @@
   </div>
 </main>
 <script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
 <script src="js/app.js"></script>
 <script>
 (function(){
-  const set = WORD_SETS.find(s => s.id === qs("set")) || WORD_SETS[0];
-  $("#subtitle").textContent = `${set.icon} ${set.name}`;
-  $("#backLink").href = `vocabquiz.html?set=${set.id}`;
-  $("#doneBack").href = `wordlist.html?set=${set.id}`;
+  const set = findSet(qs("set")) || WORD_SETS[0];
+  const p = qs("p");
+  const suffix = p ? `&p=${p}` : "";
+  $("#subtitle").textContent = `${set.icon} ${set.name}` + (p ? ` 第 ${p} 篇` : "");
+  $("#backLink").href = `vocabquiz.html?set=${set.id}${suffix}`;
+  $("#doneBack").href = `wordlist.html?set=${set.id}${suffix}`;
 
-  const N = Math.min(10, set.words.length);
-  const picked = sampleN(set.words.map((w,i) => ({en:w[0], zh:w[1], pos:w[2], ex:w[3]||"", idx:i})), N);
+  // 有指定篇數 → 考那 10 個字；否則整個主題（含簡單字）隨機抽 10 題
+  const source = p
+    ? lessonWords(set, p)
+    : set.words.map((w,i) => ({en:w[0], zh:w[1], pos:w[2], ex:w[3]||"", idx:i}));
+  const picked = sampleN(source, Math.min(10, source.length));
 
   // 每題隨機方向：中→英 或 英→中
   const quiz = picked.map(w => {

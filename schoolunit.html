@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>學校單元</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" href="school.html">‹</a>
+    <div><h1 id="title"></h1><div class="sub" id="subtitle"></div></div>
+  </div>
+
+  <a class="btn primary" id="wordsBtn">📚 這課的單字（每篇 10 個字）</a>
+  <div style="height:10px"></div>
+  <a class="btn ghost" id="quizBtn">📝 單字考試</a>
+
+  <div class="card review tablewrap hidden" id="grammarCard" style="margin-top:14px"></div>
+  <a class="btn ghost hidden" id="gQuizBtn">✍️ 這課的文法練習</a>
+</main>
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const u = SCHOOL_UNITS.find(x => x.id === qs("u"));
+  if (!u || !u.ready){ location.replace("school.html"); return; }
+
+  const learn = learnWords(u);
+  $("#title").textContent = `${u.icon} ${u.name}`;
+  $("#subtitle").textContent = (u.topic ? u.topic + "・" : "") +
+    `${learn.length} 個單字・已認識 ${knownIn(u.id, learn)} 個`;
+  $("#wordsBtn").href = `lessons.html?set=${u.id}`;
+  $("#quizBtn").href = `vocabquiz.html?set=${u.id}`;
+
+  if (u.grammar){
+    $("#grammarCard").classList.remove("hidden");
+    $("#grammarCard").innerHTML = u.grammar;
+  }
+  if (u.bankId){
+    $("#gQuizBtn").classList.remove("hidden");
+    $("#gQuizBtn").href = `unit.html?u=${u.bankId}`;
+  }
+})();
+</script>
+</body>
+</html>
