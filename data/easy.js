@@ -1,9 +1,9 @@
 // 「學單字」頁面要略過的字（國小程度、學生已經會的）
 // 注意：這些字仍然保留在單字考試的題庫裡，只是不再花時間學。
 window.EASY_WORDS = {
+// 序數 first / second / third 與 eleven / twelve 還沒教過，保留在學單字裡
 numbers:["zero","one","two","three","four","five","six","seven","eight","nine","ten",
-  "eleven","twelve","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety",
-  "first","second","third"],
+  "twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"],
 time:["spring","summer","winter","year","month","week","day","morning","night",
   "today","tomorrow","yesterday","time","birthday"],
 colors:["color","red","orange","yellow","green","blue","purple","pink","brown","black","white"],

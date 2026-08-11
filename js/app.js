@@ -69,10 +69,14 @@ function learnWords(set){
     .map((w, i) => ({en:w[0], zh:w[1], pos:w[2], ex:w[3] || "", idx:i}))
     .filter(w => !easy.has(w.en));
 }
-// 切成每篇 10 個字
+// 切成每篇 10 個字；最後不足 4 個字就併入前一篇，避免出現只有 1 個字的篇
 function lessonsOf(set){
   const all = learnWords(set), out = [];
   for (let i = 0; i < all.length; i += LESSON_SIZE) out.push(all.slice(i, i + LESSON_SIZE));
+  if (out.length > 1 && out[out.length-1].length < 4){
+    const tail = out.pop();
+    out[out.length-1] = out[out.length-1].concat(tail);
+  }
   return out;
 }
 // 指定第 n 篇（1 起算）；沒指定就回傳全部要學的字
