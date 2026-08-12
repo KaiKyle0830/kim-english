@@ -359,10 +359,12 @@ async function maybeAutoReport(){
   finally { autoSending = false; }
 }
 if (typeof window !== "undefined"){
-  addEventListener("visibilitychange", () => {
+  // visibilitychange 是派發在 document 上，直接掛在 document 才不會漏接
+  document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") maybeAutoReport();
   });
   addEventListener("pagehide", () => { maybeAutoReport(); });
+  addEventListener("blur", () => { maybeAutoReport(); });
   addEventListener("load", () => setTimeout(maybeAutoReport, 2000));
 }
 
