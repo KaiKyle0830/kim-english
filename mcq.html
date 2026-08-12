@@ -118,6 +118,7 @@
 
   function finish(){
     const pct = Math.round(score/quiz.length*100);
+    addVocabResult(set.id, "mcq", score, quiz.length, p);
     $("#stage").classList.add("hidden");
     $("#done").classList.remove("hidden");
     $("#doneEmoji").textContent = pct >= 90 ? "🏆" : pct >= 70 ? "🎉" : "💪";

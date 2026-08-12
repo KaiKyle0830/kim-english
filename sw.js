@@ -1,12 +1,12 @@
 // 離線快取：安裝時抓齊所有資源，之後快取優先、背景更新
-const CACHE = "kim-english-v6";
+const CACHE = "kim-english-v8";
 const ASSETS = [
   "index.html", "vocab.html", "lessons.html", "wordlist.html", "cards.html",
   "vocabquiz.html", "mcq.html", "spell.html",
   "grammar.html", "unit.html", "wrongs.html",
-  "school.html", "schoolunit.html",
+  "school.html", "schoolunit.html", "share.html",
   "css/style.css", "js/app.js", "js/units.js",
-  "data/words.js", "data/easy.js", "data/school.js",
+  "data/words.js", "data/easy.js", "data/school.js", "data/report-config.js",
   "data/grammar/u1.js", "data/grammar/u2.js", "data/grammar/u3.js", "data/grammar/u4.js",
   "data/grammar/u5.js", "data/grammar/u6.js", "data/grammar/u7.js", "data/grammar/u8.js",
   "manifest.webmanifest", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png"

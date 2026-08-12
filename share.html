@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>回報進度</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" href="index.html">‹</a>
+    <div><h1>📤 回報進度</h1><div class="sub">把學習紀錄傳給老師</div></div>
+  </div>
+
+  <div class="card">
+    <div id="summary" class="center" style="line-height:2"></div>
+  </div>
+
+  <button class="btn primary" id="btnSend">傳送給老師</button>
+  <div id="msg" class="explain hidden" style="margin-top:12px"></div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="muted small" style="line-height:1.85" id="howto"></div>
+  </div>
+
+  <details class="card" style="margin-top:14px">
+    <summary class="muted small" style="cursor:pointer">傳不出去？改用複製代碼</summary>
+    <div style="margin-top:10px">
+      <button class="btn ghost" id="btnCopy">複製代碼</button>
+      <div id="codeBox" style="word-break:break-all;font-size:.7rem;line-height:1.6;margin-top:10px;color:var(--muted)"></div>
+    </div>
+  </details>
+</main>
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
+<script src="data/report-config.js"></script>
+<script src="js/units.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const cfg = window.REPORT_CONFIG || {};
+
+  let known = 0, hard = 0;
+  allSets().forEach(s => {
+    const v = getVocab(s.id);
+    known += Object.keys(v.known).length;
+    hard += Object.keys(v.hard).length;
+  });
+  let tests = 0;
+  UNITS.forEach(u => tests += getQuizHistory(u.id).length);
+  allSets().forEach(s => tests += getVocabHistory(s.id).length);
+  $("#summary").innerHTML =
+    `已認識 <b>${known}</b> 個單字<br>還不熟 <b>${hard}</b> 個<br>做過 <b>${tests}</b> 次測驗`;
+
+  $("#howto").textContent = cfg.method === "mailto"
+    ? "按一下會打開郵件 App，內容都幫你寫好了，直接按寄出就好。"
+    : "按一下就會自動把學習紀錄傳給老師，不用做別的事。";
+
+  $("#codeBox").textContent = encodeProgress();
+
+  $("#btnSend").onclick = async () => {
+    const btn = $("#btnSend"), msg = $("#msg");
+    btn.disabled = true;
+    btn.textContent = "傳送中…";
+    msg.classList.add("hidden");
+    let r;
+    try { r = await sendReport(); }
+    catch(e){ r = {ok:false, message:"網路好像不通，等一下再試一次"}; }
+    msg.classList.remove("hidden", "good", "bad");
+    if (r.ok && r.how !== "mailto"){
+      msg.classList.add("good");
+      msg.textContent = "✅ 已經傳給老師了！";
+      btn.textContent = "已傳送";
+      return;
+    }
+    if (r.ok && r.how === "mailto"){
+      msg.classList.add("good");
+      msg.textContent = "已打開郵件 App，記得按「寄出」。";
+      btn.disabled = false;
+      btn.textContent = "傳送給老師";
+      return;
+    }
+    msg.classList.add("bad");
+    msg.textContent = "❌ " + (r.message || "傳送失敗") + "　可以改用下面的「複製代碼」傳給老師。";
+    btn.disabled = false;
+    btn.textContent = "再試一次";
+  };
+
+  $("#btnCopy").onclick = async () => {
+    const code = encodeProgress();
+    let ok = false;
+    try { await navigator.clipboard.writeText(code); ok = true; } catch(e){}
+    if (!ok){
+      const ta = document.createElement("textarea");
+      ta.value = code; ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand("copy"); } catch(e){}
+      ta.remove();
+    }
+    $("#btnCopy").textContent = ok ? "✓ 已複製" : "請長按下方代碼複製";
+    setTimeout(() => $("#btnCopy").textContent = "複製代碼", 2500);
+  };
+})();
+</script>
+</body>
+</html>

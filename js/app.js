@@ -26,7 +26,7 @@ function addQuizResult(unitId, score, total){
   const st = loadStore();
   st.quiz = st.quiz || {};
   st.quiz[unitId] = st.quiz[unitId] || [];
-  st.quiz[unitId].push({d:new Date().toISOString().slice(0,10), s:score, t:total});
+  st.quiz[unitId].push({d:new Date().toISOString().slice(0,16), s:score, t:total});
   if (st.quiz[unitId].length > 30) st.quiz[unitId] = st.quiz[unitId].slice(-30);
   saveStore(st);
 }
@@ -51,6 +51,86 @@ function removeWrong(unitId, idx){
 function getWrongs(unitId){
   const st = loadStore();
   return (st.wrongs && st.wrongs[unitId]) || [];
+}
+// 單字考試成績：st.vquiz[setId] = [{d:"2026-08-13T09:20", m:"mcq"|"spell", s, t, p}]
+function addVocabResult(setId, mode, score, total, p){
+  const st = loadStore();
+  st.vquiz = st.vquiz || {};
+  st.vquiz[setId] = st.vquiz[setId] || [];
+  st.vquiz[setId].push({
+    d: new Date().toISOString().slice(0,16),
+    m: mode, s: score, t: total, p: p ? +p : 0
+  });
+  if (st.vquiz[setId].length > 40) st.vquiz[setId] = st.vquiz[setId].slice(-40);
+  saveStore(st);
+}
+function getVocabHistory(setId){
+  const st = loadStore();
+  return (st.vquiz && st.vquiz[setId]) || [];
+}
+
+// ---------- 進度打包：給老師後台看的分享碼 ----------
+// 認識／不熟用位元遮罩壓縮，才能塞進一條網址
+function bitsToB64(bits){
+  let bytes = "";
+  for (let i = 0; i < bits.length; i += 8){
+    bytes += String.fromCharCode(parseInt(bits.slice(i, i+8).padEnd(8, "0"), 2));
+  }
+  return btoa(bytes).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64ToBits(b64, len){
+  const s = atob(b64.replace(/-/g,"+").replace(/_/g,"/"));
+  let bits = "";
+  for (let i = 0; i < s.length; i++) bits += s.charCodeAt(i).toString(2).padStart(8, "0");
+  return bits.slice(0, len);
+}
+// 代碼做過簡單擾亂，學生看到只會是一串亂碼（這是防好奇，不是加密）
+const CODE_PREFIX = "KIN1.";
+const CODE_KEY = "KinEnglish2026";
+function xorStr(s){
+  let out = "";
+  for (let i = 0; i < s.length; i++)
+    out += String.fromCharCode(s.charCodeAt(i) ^ CODE_KEY.charCodeAt(i % CODE_KEY.length));
+  return out;
+}
+function encodeProgress(){
+  const st = loadStore();
+  const k = {}, h = {};
+  allSets().forEach(s => {
+    const v = (st.vocab && st.vocab[s.id]) || {known:{}, hard:{}};
+    let kb = "", hb = "", any = false;
+    for (let i = 0; i < s.words.length; i++){
+      const kk = v.known[i] ? "1" : "0", hh = v.hard[i] ? "1" : "0";
+      if (kk === "1" || hh === "1") any = true;
+      kb += kk; hb += hh;
+    }
+    if (any){ k[s.id] = bitsToB64(kb); h[s.id] = bitsToB64(hb); }
+  });
+  const payload = {v:1, t:new Date().toISOString().slice(0,16),
+    g: st.goalSet || "", k, h, q: st.quiz || {}, w: st.wrongs || {}, vq: st.vquiz || {}};
+  // 用 encodeURIComponent 先處理中文等非 Latin1 字元，btoa 才不會爆
+  const raw = unescape(encodeURIComponent(JSON.stringify(payload)));
+  return CODE_PREFIX + btoa(xorStr(raw))
+    .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function decodeProgress(code){
+  let c = String(code).trim().replace(/\s+/g, "");
+  if (c.startsWith(CODE_PREFIX)) c = c.slice(CODE_PREFIX.length);
+  const b64 = c.replace(/-/g,"+").replace(/_/g,"/");
+  const p = JSON.parse(decodeURIComponent(escape(xorStr(atob(b64)))));
+  const vocab = {};
+  allSets().forEach(s => {
+    if (!p.k || !p.k[s.id]) return;
+    const kb = b64ToBits(p.k[s.id], s.words.length);
+    const hb = b64ToBits(p.h[s.id] || "", s.words.length);
+    const known = {}, hard = {};
+    for (let i = 0; i < s.words.length; i++){
+      if (kb[i] === "1") known[i] = true;
+      if (hb[i] === "1") hard[i] = true;
+    }
+    vocab[s.id] = {known, hard};
+  });
+  return {stamp:p.t, goalSet:p.g, vocab, quiz:p.q || {}, wrongs:p.w || {}, vquiz:p.vq || {}};
 }
 // ---------- 單字來源：主題單字集 ＋ 學校課本單元 ----------
 // 學校單元與主題單字集的資料結構相同，所以字卡／單字表／測驗都能共用
@@ -96,6 +176,127 @@ function setGoalSet(setId){
   const st = loadStore();
   st.goalSet = setId;
   saveStore(st);
+}
+
+// ---------- 學習報告（寄給老師的純文字內容） ----------
+function buildReport(){
+  const st = loadStore();
+  const L = [];
+  const cfg = window.REPORT_CONFIG || {};
+  const now = new Date().toISOString().slice(0,16).replace("T", " ");
+  L.push(`${cfg.studentName || "學生"} 的英文學習回報`);
+  L.push(`回報時間：${now}`);
+
+  // 總覽
+  let known = 0, hard = 0, learnable = 0;
+  allSets().forEach(s => {
+    const v = getVocab(s.id), learn = learnWords(s);
+    learnable += learn.length;
+    known += learn.filter(w => v.known[w.idx]).length;
+    hard += Object.keys(v.hard).length;
+  });
+  const units = (window.UNITS || []);
+  let passed = 0, tests = 0;
+  units.forEach(u => {
+    const h = getQuizHistory(u.id);
+    tests += h.length;
+    if (h.some(r => r.s / r.t >= 0.8)) passed++;
+  });
+  allSets().forEach(s => tests += getVocabHistory(s.id).length);
+
+  L.push("");
+  L.push("【總覽】");
+  L.push(`已認識單字：${known} / ${learnable}`);
+  L.push(`標記不熟：${hard} 個`);
+  L.push(`文法通過：${passed} / ${units.length} 單元（80 分以上）`);
+  L.push(`累計測驗：${tests} 次`);
+
+  // 文法
+  const gLines = [];
+  units.forEach(u => {
+    const h = getQuizHistory(u.id);
+    if (!h.length){ gLines.push(`Unit ${u.no} ${u.name}：尚未測驗`); return; }
+    const pcts = h.map(r => Math.round(r.s / r.t * 100));
+    gLines.push(`Unit ${u.no} ${u.name}：${h.length} 次，最佳 ${Math.max(...pcts)} 分，` +
+      `最近 ${pcts[pcts.length-1]} 分，錯題 ${getWrongs(u.id).length} 題`);
+  });
+  L.push(""); L.push("【文法測驗】"); L.push(...gLines);
+
+  // 單字
+  const vLines = [];
+  allSets().forEach(s => {
+    const v = getVocab(s.id), learn = learnWords(s);
+    const k = learn.filter(w => v.known[w.idx]).length;
+    const hd = Object.keys(v.hard).length;
+    if (k || hd) vLines.push(`${s.name}：認識 ${k}/${learn.length}${hd ? `，不熟 ${hd}` : ""}`);
+  });
+  if (vLines.length){ L.push(""); L.push("【單字進度】"); L.push(...vLines); }
+
+  // 最近測驗
+  const rec = [];
+  units.forEach(u => getQuizHistory(u.id).forEach(r =>
+    rec.push({d:r.d, w:`文法 Unit ${u.no} ${u.name}`, s:r.s, t:r.t})));
+  allSets().forEach(s => getVocabHistory(s.id).forEach(r =>
+    rec.push({d:r.d, w:`單字 ${s.name}${r.p ? ` 第${r.p}篇` : ""}・${r.m === "mcq" ? "選擇題" : "拼字"}`, s:r.s, t:r.t})));
+  rec.sort((a,b) => String(b.d).localeCompare(String(a.d)));
+  if (rec.length){
+    L.push(""); L.push("【最近測驗】");
+    rec.slice(0,15).forEach(r => L.push(`${String(r.d).replace("T"," ")}　${r.w}　${r.s}/${r.t}`));
+  }
+
+  // 不熟的字
+  const hLines = [];
+  allSets().forEach(s => {
+    const v = getVocab(s.id);
+    const ws = Object.keys(v.hard).map(Number).sort((a,b)=>a-b)
+      .map(i => s.words[i]).filter(Boolean);
+    if (ws.length) hLines.push(`${s.name}：` + ws.map(w => `${w[0]} ${w[1]}`).join("、"));
+  });
+  if (hLines.length){ L.push(""); L.push("【還不熟的單字】"); L.push(...hLines); }
+
+  L.push(""); L.push("————————————————");
+  L.push("完整儀表板代碼（貼到 teacher.html 可看圖表與錯題）：");
+  L.push(encodeProgress());
+  return L.join("\n");
+}
+
+// 一鍵寄送：依 report-config.js 的設定送出，回傳 {ok, how, message}
+async function sendReport(){
+  const cfg = window.REPORT_CONFIG || {};
+  const body = buildReport();
+  const subject = (cfg.subject || "英文學習回報") + "（" +
+    new Date().toISOString().slice(0,10) + "）";
+
+  if (cfg.method === "web3forms" && cfg.accessKey){
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: {"Content-Type": "application/json", Accept: "application/json"},
+      body: JSON.stringify({access_key: cfg.accessKey, subject,
+        from_name: cfg.studentName || "學生", message: body})
+    });
+    const j = await res.json().catch(() => ({}));
+    if (res.ok && j.success !== false) return {ok:true, how:"web3forms"};
+    return {ok:false, how:"web3forms", message:(j && j.message) || "寄送失敗"};
+  }
+
+  if (cfg.method === "formsubmit" && cfg.teacherEmail){
+    const res = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(cfg.teacherEmail), {
+      method: "POST",
+      headers: {"Content-Type": "application/json", Accept: "application/json"},
+      body: JSON.stringify({_subject: subject, name: cfg.studentName || "學生", message: body})
+    });
+    const j = await res.json().catch(() => ({}));
+    if (res.ok) return {ok:true, how:"formsubmit", message:j && j.message};
+    return {ok:false, how:"formsubmit", message:"寄送失敗"};
+  }
+
+  // 後備：打開郵件 App（內容已經帶好，學生按寄出）
+  if (cfg.teacherEmail){
+    location.href = `mailto:${cfg.teacherEmail}?subject=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`;
+    return {ok:true, how:"mailto"};
+  }
+  return {ok:false, how:"none", message:"老師還沒設定收件方式"};
 }
 
 // ---------- 發音 (Web Speech API) ----------

@@ -102,6 +102,7 @@
   function nextQ(){
     cur++;
     if (cur >= quiz.length){
+      addVocabResult(set.id, "spell", right, quiz.length, p);
       $("#stage").classList.add("hidden");
       $("#done").classList.remove("hidden");
       $("#doneStat").textContent = `${right} / ${quiz.length}`;

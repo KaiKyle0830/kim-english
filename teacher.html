@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>學習狀況後台</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><h1>📊 學習狀況</h1><div class="sub" id="stamp">老師後台</div></div>
+  </div>
+
+  <!-- 貼上代碼 -->
+  <div class="card" id="inputCard">
+    <b>貼上 Kin 傳來的代碼</b>
+    <div class="muted small" style="margin:6px 0 10px">整段貼進來就好，不用刪頭尾空白。</div>
+    <textarea class="paste" id="codeInput" placeholder="KIN1.…" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <div style="height:10px"></div>
+    <button class="btn primary" id="btnLoad">看學習狀況</button>
+    <div id="err" class="explain bad hidden" style="margin-top:10px"></div>
+  </div>
+
+  <div id="dash" class="hidden"></div>
+</main>
+
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
+<script src="js/units.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  // ---------- 取得資料 ----------
+  // 有代碼就看代碼；沒有的話（例如老師直接拿學生的裝置看）就讀本機紀錄
+  function localData(){
+    const st = loadStore();
+    return {stamp:"（這台裝置目前的紀錄）", goalSet:st.goalSet || "",
+      vocab:st.vocab || {}, quiz:st.quiz || {}, wrongs:st.wrongs || {}, vquiz:st.vquiz || {}};
+  }
+  function hasAny(d){
+    return Object.keys(d.vocab).length || Object.keys(d.quiz).length || Object.keys(d.vquiz).length;
+  }
+
+  function fmtTime(s){
+    if (!s) return "";
+    return String(s).replace("T", " ").slice(0, 16);
+  }
+
+  // ---------- 畫面 ----------
+  function render(d){
+    $("#dash").classList.remove("hidden");
+    $("#dash").innerHTML = kpis(d) + alerts(d) + grammarSec(d) + vocabSec(d) + hardWordsSec(d) + historySec(d);
+    bindBanks();
+  }
+
+  function vocabTotals(d){
+    let known = 0, hard = 0, learnable = 0;
+    allSets().forEach(s => {
+      const v = d.vocab[s.id] || {known:{}, hard:{}};
+      const learn = learnWords(s);
+      learnable += learn.length;
+      known += learn.filter(w => v.known[w.idx]).length;
+      hard  += Object.keys(v.hard).length;
+    });
+    return {known, hard, learnable};
+  }
+
+  function unitStats(d){
+    return UNITS.map(u => {
+      const h = d.quiz[u.id] || [];
+      const pcts = h.map(r => Math.round(r.s / r.t * 100));
+      return {
+        u, times: h.length,
+        best: pcts.length ? Math.max(...pcts) : null,
+        last: pcts.length ? pcts[pcts.length-1] : null,
+        lastAt: h.length ? h[h.length-1].d : null,
+        wrongs: (d.wrongs[u.id] || []).length
+      };
+    });
+  }
+
+  function kpis(d){
+    const t = vocabTotals(d);
+    const us = unitStats(d);
+    const passed = us.filter(x => x.best !== null && x.best >= 80).length;
+    let tests = 0, lastAt = "";
+    us.forEach(x => { tests += x.times; if (x.lastAt && x.lastAt > lastAt) lastAt = x.lastAt; });
+    allSets().forEach(s => (d.vquiz[s.id] || []).forEach(r => {
+      tests++; if (r.d > lastAt) lastAt = r.d;
+    }));
+    const pct = t.learnable ? Math.round(t.known / t.learnable * 100) : 0;
+    return `<div class="kpis">
+      <div class="kpi"><div class="v">${t.known}</div><div class="l">已認識單字</div>
+        <div class="sub">共 ${t.learnable} 字（${pct}%）</div></div>
+      <div class="kpi"><div class="v">${t.hard}</div><div class="l">標記不熟</div>
+        <div class="sub">需要再複習</div></div>
+      <div class="kpi"><div class="v">${passed} / ${UNITS.length}</div><div class="l">文法單元通過</div>
+        <div class="sub">80 分以上算通過</div></div>
+      <div class="kpi"><div class="v">${tests}</div><div class="l">做過的測驗</div>
+        <div class="sub">${lastAt ? "最近 " + fmtTime(lastAt) : "尚無紀錄"}</div></div>
+    </div>`;
+  }
+
+  // 自動挑出需要老師注意的地方
+  function alerts(d){
+    const out = [];
+    const us = unitStats(d);
+    const notYet = us.filter(x => x.times === 0);
+    const weak = us.filter(x => x.best !== null && x.best < 80)
+                   .sort((a,b) => a.best - b.best);
+    if (weak.length){
+      out.push(`<div class="alert"><span class="ico">⚠️</span><div>
+        <b>文法還沒過關：</b>${weak.map(x => `Unit ${x.u.no} ${x.u.name}（最高 ${x.best} 分）`).join("、")}</div></div>`);
+    }
+    if (notYet.length){
+      out.push(`<div class="alert"><span class="ico">⬜</span><div>
+        <b>還沒測驗過：</b>${notYet.map(x => `Unit ${x.u.no} ${x.u.name}`).join("、")}</div></div>`);
+    }
+    // 不熟最多的主題
+    const hardBySet = allSets().map(s => ({s, n:Object.keys((d.vocab[s.id]||{hard:{}}).hard).length}))
+      .filter(x => x.n > 0).sort((a,b) => b.n - a.n).slice(0,3);
+    if (hardBySet.length){
+      out.push(`<div class="alert"><span class="ico">📕</span><div>
+        <b>單字最卡的主題：</b>${hardBySet.map(x => `${x.s.name}（${x.n} 個）`).join("、")}</div></div>`);
+    }
+    const t = vocabTotals(d);
+    if (!out.length && t.known){
+      out.push(`<div class="alert"><span class="ico">✅</span><div>目前沒有明顯落後的地方，狀況不錯。</div></div>`);
+    }
+    if (!out.length) return "";
+    return `<div class="sec-title">需要注意</div><div class="card" style="padding:4px 18px">${out.join("")}</div>`;
+  }
+
+  function scoreTag(pct){
+    if (pct === null) return `<span class="tag none">未測驗</span>`;
+    if (pct >= 90) return `<span class="tag good">✓ ${pct} 分</span>`;
+    if (pct >= 80) return `<span class="tag good">✓ ${pct} 分</span>`;
+    if (pct >= 60) return `<span class="tag warn">△ ${pct} 分</span>`;
+    return `<span class="tag bad">✗ ${pct} 分</span>`;
+  }
+
+  function grammarSec(d){
+    const rows = unitStats(d).map(x => `<tr>
+      <td>Unit ${x.u.no}<div class="muted small">${x.u.name}</div></td>
+      <td class="num">${x.times || "–"}</td>
+      <td class="num">${scoreTag(x.best)}</td>
+      <td class="num">${x.last === null ? "–" : x.last + " 分"}</td>
+      <td class="num">${x.wrongs || "–"}</td>
+    </tr>`).join("");
+    const banks = unitStats(d).filter(x => x.wrongs > 0).map(x =>
+      `<details class="qbox" data-unit="${x.u.id}">
+        <summary>Unit ${x.u.no} ${x.u.name}　答錯的 ${x.wrongs} 題</summary>
+        <div class="qlist muted small" style="margin-top:8px">載入中…</div>
+      </details>`).join("");
+    return `<div class="sec-title">文法測驗</div>
+      <div class="card">
+        <table class="dash-table">
+          <thead><tr><th>單元</th><th class="num">次數</th><th class="num">最佳</th><th class="num">最近</th><th class="num">錯題</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${banks ? `<div class="sec-title">他答錯的文法題</div><div class="card" style="padding:6px 18px">${banks}</div>` : ""}`;
+  }
+
+  function vocabSec(d){
+    const rows = allSets().map(s => {
+      const v = d.vocab[s.id] || {known:{}, hard:{}};
+      const learn = learnWords(s);
+      const known = learn.filter(w => v.known[w.idx]).length;
+      const hard = Object.keys(v.hard).length;
+      return {s, known, hard, total:learn.length};
+    }).filter(r => r.known || r.hard);
+    if (!rows.length) return `<div class="sec-title">單字進度</div>
+      <div class="card muted small center" style="padding:20px">還沒有背單字的紀錄</div>`;
+    rows.sort((a,b) => b.known/b.total - a.known/a.total);
+    const html = rows.map(r => `<tr>
+      <td>${r.s.icon} ${r.s.name}</td>
+      <td style="width:38%"><div class="minibar"><i style="width:${(r.known/r.total*100).toFixed(0)}%"></i></div></td>
+      <td class="num">${r.known}/${r.total}</td>
+      <td class="num">${r.hard ? `<span class="tag bad">${r.hard} 不熟</span>` : ""}</td>
+    </tr>`).join("");
+    return `<div class="sec-title">單字進度</div><div class="card">
+      <table class="dash-table"><tbody>${html}</tbody></table></div>`;
+  }
+
+  function hardWordsSec(d){
+    const groups = allSets().map(s => {
+      const v = d.vocab[s.id] || {hard:{}};
+      const idxs = Object.keys(v.hard).map(Number).sort((a,b) => a-b);
+      const ws = idxs.map(i => s.words[i]).filter(Boolean);
+      return {s, ws};
+    }).filter(g => g.ws.length);
+    if (!groups.length) return "";
+    const html = groups.map(g => `<div style="padding:12px 0;border-bottom:1px solid var(--line)">
+      <b class="small">${g.s.icon} ${g.s.name}</b>
+      <div style="margin-top:8px">${g.ws.map(w =>
+        `<span class="wordchip"><b>${esc(w[0])}</b> <span>${esc(w[1])}</span></span>`).join("")}</div>
+    </div>`).join("");
+    return `<div class="sec-title">他還不熟的單字</div>
+      <div class="card" style="padding:4px 18px">${html}</div>`;
+  }
+
+  function historySec(d){
+    const rec = [];
+    UNITS.forEach(u => (d.quiz[u.id] || []).forEach(r =>
+      rec.push({d:r.d, what:`文法 Unit ${u.no} ${u.name}`, s:r.s, t:r.t})));
+    allSets().forEach(s => (d.vquiz[s.id] || []).forEach(r =>
+      rec.push({d:r.d, what:`單字 ${s.name}${r.p ? ` 第${r.p}篇` : ""}・${r.m === "mcq" ? "選擇題" : "拼字"}`, s:r.s, t:r.t})));
+    if (!rec.length) return "";
+    rec.sort((a,b) => String(b.d).localeCompare(String(a.d)));
+    const rows = rec.slice(0, 40).map(r => {
+      const pct = Math.round(r.s / r.t * 100);
+      return `<tr><td class="muted small" style="white-space:nowrap">${fmtTime(r.d)}</td>
+        <td>${esc(r.what)}</td>
+        <td class="num">${r.s}/${r.t}</td>
+        <td class="num">${scoreTag(pct)}</td></tr>`;
+    }).join("");
+    return `<div class="sec-title">測驗紀錄</div><div class="card">
+      <div class="tablewrap"><table class="dash-table">
+        <thead><tr><th>時間</th><th>項目</th><th class="num">得分</th><th class="num"></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+      ${rec.length > 40 ? `<div class="muted small center" style="margin-top:8px">只顯示最近 40 筆（共 ${rec.length} 筆）</div>` : ""}
+    </div>`;
+  }
+
+  // 展開錯題時才載入題庫
+  const loaded = {};
+  function bindBanks(){
+    $$("details.qbox").forEach(el => {
+      el.addEventListener("toggle", () => {
+        if (!el.open) return;
+        const uid = el.dataset.unit;
+        const box = $(".qlist", el);
+        const draw = () => {
+          const bank = (window.GRAMMAR_BANKS || {})[uid] || [];
+          const idxs = (DATA.wrongs[uid] || []);
+          box.innerHTML = idxs.map(i => {
+            const q = bank[i];
+            if (!q) return "";
+            return `<div class="explain bad" style="margin:8px 0">${esc(q.q)}<br>
+              正解：<b>${esc(q.opts[q.a])}</b><br><span class="muted small">${esc(q.exp)}</span></div>`;
+          }).join("") || `<div class="muted small">找不到題目資料</div>`;
+        };
+        if (loaded[uid]){ draw(); return; }
+        const sc = document.createElement("script");
+        sc.src = `data/grammar/${uid}.js`;
+        sc.onload = () => { loaded[uid] = true; draw(); };
+        sc.onerror = () => box.textContent = "題庫載入失敗";
+        document.body.appendChild(sc);
+      });
+    });
+  }
+
+  // ---------- 啟動 ----------
+  let DATA = null;
+  function load(code){
+    try {
+      DATA = decodeProgress(code);
+      $("#stamp").textContent = "資料時間：" + fmtTime(DATA.stamp);
+      $("#inputCard").classList.add("hidden");
+      render(DATA);
+      try { sessionStorage.setItem("lastCode", code); } catch(e){}
+    } catch(e){
+      const err = $("#err");
+      err.classList.remove("hidden");
+      err.textContent = "這段代碼看起來不完整或不正確，請確認有整段複製到。";
+    }
+  }
+
+  $("#btnLoad").onclick = () => {
+    const raw = $("#codeInput").value;
+    // 整封信貼進來也可以，自動抓出代碼那一段
+    const m = raw.match(/KIN1\.[A-Za-z0-9_-]+/);
+    const c = m ? m[0] : raw.trim();
+    if (c) load(c);
+  };
+
+  const fromUrl = new URLSearchParams(location.search).get("d");
+  if (fromUrl){ load(fromUrl); }
+  else {
+    const local = localData();
+    if (hasAny(local)){
+      // 直接在學生裝置上打開後台
+      DATA = local;
+      $("#stamp").textContent = local.stamp;
+      $("#inputCard").classList.add("hidden");
+      render(local);
+      const back = document.createElement("button");
+      back.className = "btn ghost";
+      back.textContent = "改成貼上代碼";
+      back.onclick = () => { $("#inputCard").classList.remove("hidden"); $("#dash").classList.add("hidden"); };
+      $("main").appendChild(back);
+    }
+  }
+})();
+</script>
+</body>
+</html>
