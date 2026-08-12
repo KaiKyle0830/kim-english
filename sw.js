@@ -1,5 +1,5 @@
 // 離線快取：安裝時抓齊所有資源，之後快取優先、背景更新
-const CACHE = "kim-english-v8";
+const CACHE = "kim-english-v9";
 const ASSETS = [
   "index.html", "vocab.html", "lessons.html", "wordlist.html", "cards.html",
   "vocabquiz.html", "mcq.html", "spell.html",

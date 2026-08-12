@@ -8,7 +8,7 @@
 //
 window.REPORT_CONFIG = {
   method: "web3forms",
-  accessKey: "",                 // ← 把 web3forms.com 給的 access key 貼在這裡就會生效
+  accessKey: "f1e375ac-bccd-4fb2-80b2-35bd06703c84",   // web3forms 的公開金鑰（可放在前端）
   teacherEmail: "",              // formsubmit / mailto 用
   studentName: "Kin",
   subject: "Kin 的英文學習回報"
