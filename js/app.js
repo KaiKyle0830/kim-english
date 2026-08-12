@@ -261,15 +261,19 @@ function buildReport(){
 }
 
 // 一鍵寄送：依 report-config.js 的設定送出，回傳 {ok, how, message}
-async function sendReport(){
+// opts.silent = 自動回報（不做 mailto 後備）；opts.keepalive = 頁面關閉中也要送出
+async function sendReport(opts){
+  opts = opts || {};
   const cfg = window.REPORT_CONFIG || {};
   const body = buildReport();
-  const subject = (cfg.subject || "英文學習回報") + "（" +
+  const subject = (cfg.subject || "英文學習回報") +
+    (opts.silent ? "｜自動回報" : "") + "（" +
     new Date().toISOString().slice(0,10) + "）";
 
   if (cfg.method === "web3forms" && cfg.accessKey){
     const res = await fetch("https://api.web3forms.com/submit", {
       method: "POST",
+      keepalive: !!opts.keepalive,
       headers: {"Content-Type": "application/json", Accept: "application/json"},
       body: JSON.stringify({access_key: cfg.accessKey, subject,
         from_name: cfg.studentName || "學生", message: body})
@@ -282,6 +286,7 @@ async function sendReport(){
   if (cfg.method === "formsubmit" && cfg.teacherEmail){
     const res = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(cfg.teacherEmail), {
       method: "POST",
+      keepalive: !!opts.keepalive,
       headers: {"Content-Type": "application/json", Accept: "application/json"},
       body: JSON.stringify({_subject: subject, name: cfg.studentName || "學生", message: body})
     });
@@ -290,6 +295,8 @@ async function sendReport(){
     return {ok:false, how:"formsubmit", message:"寄送失敗"};
   }
 
+  if (opts.silent) return {ok:false, how:"none", message:"沒有可用的自動寄送方式"};
+
   // 後備：打開郵件 App（內容已經帶好，學生按寄出）
   if (cfg.teacherEmail){
     location.href = `mailto:${cfg.teacherEmail}?subject=${encodeURIComponent(subject)}` +
@@ -297,6 +304,66 @@ async function sendReport(){
     return {ok:true, how:"mailto"};
   }
   return {ok:false, how:"none", message:"老師還沒設定收件方式"};
+}
+
+// ---------- 自動回報 ----------
+// iOS 不允許網頁在關閉狀態下自己執行，所以改成：學生打開 App 或用完切走時，
+// 若有新的學習紀錄就在背景寄出。跨到隔天一定會補送一次。
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" +
+         String(d.getDate()).padStart(2,"0");
+}
+// 進度指紋：只要背了字或考過試就會變
+function progressFingerprint(){
+  const st = loadStore();
+  const src = JSON.stringify([st.vocab || {}, st.quiz || {}, st.vquiz || {}]);
+  let h = 0;
+  for (let i = 0; i < src.length; i++) h = (h * 31 + src.charCodeAt(i)) | 0;
+  return src.length + ":" + h;
+}
+function hasProgress(){
+  const st = loadStore();
+  return !!(st.vocab && Object.keys(st.vocab).length) ||
+         !!(st.quiz && Object.keys(st.quiz).length) ||
+         !!(st.vquiz && Object.keys(st.vquiz).length);
+}
+function getAutoState(){ return loadStore().auto || {}; }
+function setAutoState(o){
+  const st = loadStore();
+  st.auto = o;
+  saveStore(st);
+}
+let autoSending = false;
+async function maybeAutoReport(){
+  const cfg = window.REPORT_CONFIG || {};
+  if (!cfg.auto || autoSending) return false;
+  if (/teacher\.html/.test(location.pathname)) return false;   // 老師後台不回報
+  if (navigator.onLine === false) return false;
+  if (!hasProgress()) return false;
+
+  const fp = progressFingerprint();
+  const a = getAutoState();
+  if (a.fp === fp) return false;                                // 沒有新進度就不寄
+
+  const newDay = a.day !== todayStr();
+  const hours = a.at ? (Date.now() - new Date(a.at).getTime()) / 36e5 : Infinity;
+  if (!newDay && hours < (cfg.minHours == null ? 6 : cfg.minHours)) return false;
+
+  autoSending = true;
+  try {
+    const r = await sendReport({silent:true, keepalive:true});
+    if (r.ok) setAutoState({fp, at:new Date().toISOString(), day:todayStr()});
+    return r.ok;
+  } catch(e){ return false; }
+  finally { autoSending = false; }
+}
+if (typeof window !== "undefined"){
+  addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") maybeAutoReport();
+  });
+  addEventListener("pagehide", () => { maybeAutoReport(); });
+  addEventListener("load", () => setTimeout(maybeAutoReport, 2000));
 }
 
 // ---------- 發音 (Web Speech API) ----------

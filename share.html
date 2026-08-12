@@ -57,9 +57,15 @@
   $("#summary").innerHTML =
     `已認識 <b>${known}</b> 個單字<br>還不熟 <b>${hard}</b> 個<br>做過 <b>${tests}</b> 次測驗`;
 
-  $("#howto").textContent = cfg.method === "mailto"
+  const a = getAutoState();
+  const autoLine = cfg.auto
+    ? `自動回報已開啟：你每天練習完關掉 App，紀錄就會自己傳給老師。${
+        a.at ? `<br>上次自動回報：${String(a.at).replace("T"," ").slice(0,16)}` : ""}`
+    : "";
+  $("#howto").innerHTML = (cfg.method === "mailto"
     ? "按一下會打開郵件 App，內容都幫你寫好了，直接按寄出就好。"
-    : "按一下就會自動把學習紀錄傳給老師，不用做別的事。";
+    : "想馬上讓老師看到的話，按一下就會立刻傳送。") +
+    (autoLine ? `<br><br>${autoLine}` : "");
 
   $("#codeBox").textContent = encodeProgress();
 

@@ -11,5 +11,10 @@ window.REPORT_CONFIG = {
   accessKey: "f1e375ac-bccd-4fb2-80b2-35bd06703c84",   // web3forms 的公開金鑰（可放在前端）
   teacherEmail: "",              // formsubmit / mailto 用
   studentName: "Kin",
-  subject: "Kin 的英文學習回報"
+  subject: "Kin 的英文學習回報",
+
+  // 自動回報：學生打開或關掉 App 時，若有新的學習紀錄就在背景寄出
+  // （iOS 不允許網頁在關閉狀態下自己執行，所以無法固定在 00:00 寄）
+  auto: true,
+  minHours: 6        // 兩次自動回報至少間隔幾小時；跨到隔天則不受此限制
 };
