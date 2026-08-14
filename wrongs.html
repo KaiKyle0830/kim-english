@@ -17,17 +17,20 @@
   </div>
   <div class="card" id="list"></div>
 </main>
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
 <script src="js/units.js"></script>
 <script src="data/report-config.js"></script>
 <script src="js/app.js"></script>
 <script>
 (function(){
-  const rows = UNITS.map(u => {
+  const rows = allUnits().map(u => {
     const n = getWrongs(u.id).length;
     if (!n) return "";
     return `<a class="row" href="unit.html?u=${u.id}&mode=wrongs">
       <span style="font-size:1.5rem">${u.icon}</span>
-      <span style="flex:1"><b>Unit ${u.no}｜${u.name}</b></span>
+      <span style="flex:1"><b>${u.isSchool ? "學校 " + u.name : "Unit " + u.no + "｜" + u.name}</b></span>
       <span class="badge">${n} 題</span>
     </a>`;
   }).join("");

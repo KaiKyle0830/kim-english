@@ -1,0 +1,130 @@
+/* 上課投影片：左右滑動、適合投影與平板 */
+.sl-body{overflow:hidden;height:100dvh}
+.sl-root{
+  position:fixed; inset:0; display:flex; flex-direction:column;
+  background:var(--bg); color:var(--text); overscroll-behavior:none;
+}
+/* 頂端列 */
+.sl-top{
+  display:flex; align-items:center; gap:10px; padding:calc(env(safe-area-inset-top) + 8px) 14px 8px;
+  font-size:.85rem; color:var(--muted); flex:0 0 auto;
+}
+.sl-top a{color:var(--accent); font-size:1.4rem; line-height:1; padding:2px 6px 2px 0}
+.sl-title{font-weight:700; color:var(--text); font-size:.92rem;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sl-count{margin-left:auto; font-variant-numeric:tabular-nums; white-space:nowrap}
+.sl-menu{background:var(--card); border-radius:8px; padding:4px 10px; font-size:.85rem}
+
+/* 進度條 */
+.sl-progress{height:3px; background:var(--line); flex:0 0 auto}
+.sl-progress>i{display:block; height:100%; background:var(--accent); transition:width .25s}
+
+/* 投影片區 */
+.sl-stage{position:relative; flex:1 1 auto; overflow:hidden; touch-action:pan-y}
+.sl-slide{
+  position:absolute; inset:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:18px 20px calc(env(safe-area-inset-bottom) + 74px);
+  opacity:0; transform:translateX(28px); pointer-events:none;
+  transition:opacity .22s ease, transform .22s ease;
+}
+.sl-slide.on{opacity:1; transform:none; pointer-events:auto}
+.sl-slide.prev{transform:translateX(-28px)}
+
+/* 底部控制 */
+.sl-bottom{
+  position:absolute; left:0; right:0; bottom:0; display:flex; align-items:center; gap:10px;
+  padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);
+  background:linear-gradient(to top, var(--bg) 62%, transparent);
+}
+.sl-btn{
+  flex:1; text-align:center; padding:13px; border-radius:13px; font-weight:700;
+  background:var(--card); box-shadow:var(--shadow); color:var(--text);
+}
+.sl-btn.main{background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff}
+.sl-btn[disabled]{opacity:.35}
+
+/* ---- 投影片內容樣式 ---- */
+.s-kicker{color:var(--accent); font-weight:800; font-size:.85rem; letter-spacing:.08em; margin-bottom:6px}
+.s-h1{font-size:2rem; font-weight:800; line-height:1.25; margin-bottom:10px}
+.s-h2{font-size:1.35rem; font-weight:800; margin:0 0 14px}
+.s-lead{font-size:1.05rem; line-height:1.85; color:var(--muted)}
+.s-center{display:flex; flex-direction:column; justify-content:center; min-height:78%}
+.s-list{list-style:none; margin:8px 0}
+.s-list li{padding:10px 0 10px 30px; position:relative; line-height:1.75; border-bottom:1px solid var(--line)}
+.s-list li:last-child{border-bottom:none}
+.s-list li::before{content:"✦"; position:absolute; left:6px; color:var(--accent)}
+.s-list li b{color:var(--text)}
+
+/* 單字卡 */
+.s-word{text-align:center; padding:6px 0 2px}
+.s-word .en{font-size:2.5rem; font-weight:800; line-height:1.15; word-break:break-word}
+.s-word .kk{color:var(--muted); font-size:1rem; margin-top:4px; font-family:"Times New Roman",serif}
+.s-word .pos{display:inline-block; background:var(--card); border-radius:999px;
+  padding:3px 12px; font-size:.8rem; color:var(--muted); margin-top:10px}
+.s-word .zh{font-size:1.45rem; font-weight:700; margin-top:10px}
+.s-word .say{margin-top:14px; font-size:1.6rem; background:var(--card);
+  border-radius:999px; padding:10px 22px; box-shadow:var(--shadow)}
+.s-word .ex{margin-top:18px; background:var(--card); border-radius:14px; padding:14px 16px;
+  text-align:left; line-height:1.8; box-shadow:var(--shadow)}
+.s-word .ex b{display:block; font-size:1.05rem; margin-bottom:2px}
+.s-word .ex span{color:var(--muted); font-size:.92rem}
+
+/* 單字總覽（一次看一組） */
+.s-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
+.s-grid div{background:var(--card); border-radius:11px; padding:10px 12px; line-height:1.55;
+  box-shadow:var(--shadow); font-size:.92rem}
+.s-grid b{display:block; font-size:1.02rem}
+.s-grid span{color:var(--muted); font-size:.85rem}
+
+/* 對話 */
+.s-dlg{margin-top:6px}
+.s-line{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); line-height:1.75}
+.s-line:last-child{border-bottom:none}
+.s-who{font-weight:800; color:var(--accent); flex:0 0 auto; min-width:3.4em}
+.s-say{flex:1}
+.s-say .zh{display:block; color:var(--muted); font-size:.88rem; margin-top:2px}
+.s-say b{background:rgba(79,109,245,.14); border-radius:4px; padding:1px 3px}
+
+/* 表格 */
+.s-table{width:100%; border-collapse:collapse; margin:10px 0; font-size:.95rem}
+.s-table th,.s-table td{border:1px solid var(--line); padding:9px 11px; text-align:left; line-height:1.65}
+.s-table th{background:var(--card); font-weight:700; white-space:nowrap}
+.s-table td b{color:var(--accent)}
+.s-scroll{overflow-x:auto}
+
+.s-tip{background:rgba(79,109,245,.09); border-radius:13px; padding:13px 15px;
+  margin-top:14px; line-height:1.8}
+.s-warn{background:rgba(208,59,59,.10); border-radius:13px; padding:13px 15px;
+  margin-top:14px; line-height:1.8}
+.s-eg{background:var(--card); border-radius:13px; padding:13px 15px; margin-top:12px;
+  line-height:1.85; box-shadow:var(--shadow)}
+.s-eg .q{font-weight:700}
+.s-eg .a{color:var(--muted)}
+
+/* 練習題（點擊揭曉） */
+.s-quiz{background:var(--card); border-radius:14px; padding:16px; margin-top:12px;
+  box-shadow:var(--shadow)}
+.s-quiz .qq{font-weight:700; font-size:1.05rem; line-height:1.7; margin-bottom:10px}
+.s-opt{display:block; width:100%; text-align:left; padding:11px 14px; border-radius:11px;
+  border:1.5px solid var(--line); background:var(--bg); margin-bottom:8px; font-size:1rem}
+.s-opt.right{border-color:var(--good); background:rgba(22,163,74,.12); font-weight:700}
+.s-opt.wrongpick{border-color:var(--bad); background:rgba(220,38,38,.10)}
+.s-ans{margin-top:8px; line-height:1.75; color:var(--muted); font-size:.92rem}
+
+/* 目錄 */
+.sl-toc{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; z-index:20}
+.sl-toc.on{display:block}
+.sl-toc-panel{position:absolute; left:0; right:0; bottom:0; max-height:76%; overflow-y:auto;
+  background:var(--bg); border-radius:20px 20px 0 0; padding:16px 18px calc(env(safe-area-inset-bottom) + 18px)}
+.sl-toc-panel h3{font-size:1.05rem; margin-bottom:8px}
+.sl-toc-panel button{display:block; width:100%; text-align:left; padding:12px 6px;
+  border-bottom:1px solid var(--line); line-height:1.5}
+.sl-toc-panel button b{color:var(--muted); font-size:.8rem; margin-right:8px;
+  font-variant-numeric:tabular-nums}
+
+@media (min-width:820px){
+  .s-h1{font-size:2.6rem}
+  .s-word .en{font-size:3.4rem}
+  .sl-slide{padding:26px 40px calc(env(safe-area-inset-bottom) + 80px); max-width:940px; margin:0 auto}
+  .s-grid{grid-template-columns:1fr 1fr 1fr}
+}

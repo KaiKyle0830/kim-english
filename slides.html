@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>上課投影片</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/slides.css">
+</head>
+<body class="sl-body">
+<div class="sl-root">
+  <div class="sl-top">
+    <a id="backLink" href="school.html">‹</a>
+    <span class="sl-title" id="deckTitle"></span>
+    <button class="sl-menu" id="btnToc">目錄</button>
+    <span class="sl-count" id="counter"></span>
+  </div>
+  <div class="sl-progress"><i id="bar" style="width:0%"></i></div>
+
+  <div class="sl-stage" id="stage"></div>
+
+  <div class="sl-bottom">
+    <button class="sl-btn" id="btnPrev">‹ 上一頁</button>
+    <button class="sl-btn main" id="btnNext">下一頁 ›</button>
+  </div>
+</div>
+
+<div class="sl-toc" id="toc">
+  <div class="sl-toc-panel">
+    <h3>目錄</h3>
+    <div id="tocList"></div>
+  </div>
+</div>
+
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
+<script src="data/slides.js"></script>
+<script src="js/units.js"></script>
+<script src="data/report-config.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const id = qs("d") || "s1";
+  const deck = (window.SLIDE_DECKS || {})[id];
+  const stage = $("#stage");
+
+  if (!deck){
+    stage.innerHTML = `<div class="sl-slide on"><div class="s-center">
+      <div class="s-h2">還沒有這一課的投影片</div>
+      <div class="s-lead">老師把講義內容匯入後就會出現。</div></div></div>`;
+    $("#deckTitle").textContent = "投影片";
+    return;
+  }
+
+  const unit = (window.SCHOOL_UNITS || []).find(u => u.deck === id);
+  if (unit) $("#backLink").href = `schoolunit.html?u=${unit.id}`;
+  $("#deckTitle").textContent = deck.title;
+
+  // 建立所有投影片
+  stage.innerHTML = deck.slides.map((s, i) =>
+    `<section class="sl-slide" data-i="${i}">${s.html}</section>`).join("");
+  const slides = $$(".sl-slide", stage);
+
+  // 記住上次看到哪一頁
+  const KEY = "slidePos:" + id;
+  let cur = 0;
+  try { cur = Math.min(+(localStorage.getItem(KEY) || 0), slides.length - 1) || 0; } catch(e){}
+
+  function show(n, dir){
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((el, i) => {
+      el.classList.toggle("on", i === n);
+      el.classList.toggle("prev", i < n);
+      if (i === n) el.scrollTop = 0;
+    });
+    cur = n;
+    $("#counter").textContent = `${n + 1} / ${slides.length}`;
+    $("#bar").style.width = ((n + 1) / slides.length * 100) + "%";
+    $("#btnPrev").disabled = n === 0;
+    $("#btnNext").textContent = n === slides.length - 1 ? "完成 ✓" : "下一頁 ›";
+    try { localStorage.setItem(KEY, n); } catch(e){}
+    // 進到單字頁自動唸一次
+    const auto = slides[n].querySelector("[data-autosay]");
+    if (auto) speak(auto.dataset.autosay);
+  }
+
+  $("#btnPrev").onclick = () => show(cur - 1);
+  $("#btnNext").onclick = () => {
+    if (cur === slides.length - 1){
+      if (unit) location.href = `schoolunit.html?u=${unit.id}`;
+      return;
+    }
+    show(cur + 1);
+  };
+
+  // 鍵盤（老師用電腦或接鍵盤上課）
+  addEventListener("keydown", e => {
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); show(cur + 1); }
+    if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); show(cur - 1); }
+    if (e.key === "Home") show(0);
+    if (e.key === "End") show(slides.length - 1);
+  });
+
+  // 左右滑動換頁（垂直滑動仍可捲動內容）
+  let sx = 0, sy = 0, tracking = false;
+  stage.addEventListener("pointerdown", e => { sx = e.clientX; sy = e.clientY; tracking = true; });
+  stage.addEventListener("pointerup", e => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6){
+      show(cur + (dx < 0 ? 1 : -1));
+    }
+  });
+  stage.addEventListener("pointercancel", () => tracking = false);
+
+  // 點字或例句就唸出來
+  stage.addEventListener("click", e => {
+    const say = e.target.closest("[data-say]");
+    if (say){ speak(say.dataset.say); return; }
+    // 練習題：點選項揭曉答案
+    const opt = e.target.closest(".s-opt");
+    if (opt && !opt.disabled){
+      const box = opt.closest(".s-quiz");
+      const right = box.dataset.ans;
+      $$(".s-opt", box).forEach(b => {
+        b.disabled = true;
+        if (b.dataset.k === right) b.classList.add("right");
+        else if (b === opt) b.classList.add("wrongpick");
+      });
+      const ans = $(".s-ans", box);
+      if (ans) ans.style.display = "block";
+    }
+  });
+
+  // 目錄
+  $("#tocList").innerHTML = deck.slides.map((s, i) =>
+    s.toc ? `<button data-go="${i}"><b>${String(i+1).padStart(2,"0")}</b>${esc(s.toc)}</button>` : ""
+  ).join("");
+  $("#btnToc").onclick = () => $("#toc").classList.add("on");
+  $("#toc").onclick = e => {
+    const go = e.target.closest("[data-go]");
+    if (go){ show(+go.dataset.go); }
+    $("#toc").classList.remove("on");
+  };
+
+  $$(".s-ans").forEach(el => el.style.display = "none");
+  show(cur);
+})();
+</script>
+</body>
+</html>

@@ -48,6 +48,9 @@
     <div class="card hidden" id="resWrongs"></div>
   </div>
 </main>
+<script src="data/words.js"></script>
+<script src="data/easy.js"></script>
+<script src="data/school.js"></script>
 <script src="js/units.js"></script>
 <script src="data/report-config.js"></script>
 <script src="js/app.js"></script>
@@ -55,10 +58,18 @@
 (function(){
   const uid = qs("u") || "u1";
   const mode = qs("mode");   // "wrongs" = 只練錯題
-  const unit = UNITS.find(u => u.id === uid) || UNITS[0];
-  $("#title").textContent = `${unit.icon} Unit ${unit.no}｜${unit.name}`;
+  // 一般文法單元，或學校講義的單元（結構不同，取用對應欄位）
+  const school = (window.SCHOOL_UNITS || []).find(u => u.id === uid && u.grammar);
+  const unit = school
+    ? {id:school.id, no:school.no, name:school.name, icon:school.icon,
+       brief:school.topic || "", review:school.grammar, isSchool:true}
+    : (UNITS.find(u => u.id === uid) || UNITS[0]);
+  $("#title").textContent = unit.isSchool
+    ? `${unit.icon} ${unit.name}`
+    : `${unit.icon} Unit ${unit.no}｜${unit.name}`;
   $("#subtitle").textContent = unit.brief;
   $("#reviewContent").innerHTML = unit.review;
+  if (unit.isSchool) $("#backLink").href = `schoolunit.html?u=${unit.id}`;
 
   // 動態載入該單元題庫
   const sc = document.createElement("script");

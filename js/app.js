@@ -140,13 +140,22 @@ function allSets(){
 }
 function findSet(id){ return allSets().find(s => s.id === id) || null; }
 
+// 文法單元：一般 8 個單元 ＋ 已匯入且有文法的學校單元
+function allUnits(){
+  const school = (window.SCHOOL_UNITS || [])
+    .filter(u => u.ready && u.grammar)
+    .map(u => ({id:u.id, no:u.no, name:u.name, icon:u.icon,
+                brief:u.topic || "", isSchool:true}));
+  return (window.UNITS || []).concat(school);
+}
+
 // ---------- 學單字：過濾簡單字、每 10 字分篇 ----------
 const LESSON_SIZE = 10;
 // 回傳這個主題「要學的字」（略過 EASY_WORDS），保留原始 index
 function learnWords(set){
   const easy = new Set((window.EASY_WORDS && window.EASY_WORDS[set.id]) || []);
   return set.words
-    .map((w, i) => ({en:w[0], zh:w[1], pos:w[2], ex:w[3] || "", idx:i}))
+    .map((w, i) => ({en:w[0], zh:w[1], pos:w[2], ex:w[3] || "", kk:w[4] || "", idx:i}))
     .filter(w => !easy.has(w.en));
 }
 // 切成每篇 10 個字；最後不足 4 個字就併入前一篇，避免出現只有 1 個字的篇
@@ -195,7 +204,7 @@ function buildReport(){
     known += learn.filter(w => v.known[w.idx]).length;
     hard += Object.keys(v.hard).length;
   });
-  const units = (window.UNITS || []);
+  const units = allUnits();
   let passed = 0, tests = 0;
   units.forEach(u => {
     const h = getQuizHistory(u.id);
@@ -214,10 +223,11 @@ function buildReport(){
   // 文法
   const gLines = [];
   units.forEach(u => {
+    const label = u.isSchool ? `【學校】${u.name}` : `Unit ${u.no} ${u.name}`;
     const h = getQuizHistory(u.id);
-    if (!h.length){ gLines.push(`Unit ${u.no} ${u.name}：尚未測驗`); return; }
+    if (!h.length){ gLines.push(`${label}：尚未測驗`); return; }
     const pcts = h.map(r => Math.round(r.s / r.t * 100));
-    gLines.push(`Unit ${u.no} ${u.name}：${h.length} 次，最佳 ${Math.max(...pcts)} 分，` +
+    gLines.push(`${label}：${h.length} 次，最佳 ${Math.max(...pcts)} 分，` +
       `最近 ${pcts[pcts.length-1]} 分，錯題 ${getWrongs(u.id).length} 題`);
   });
   L.push(""); L.push("【文法測驗】"); L.push(...gLines);
@@ -235,7 +245,8 @@ function buildReport(){
   // 最近測驗
   const rec = [];
   units.forEach(u => getQuizHistory(u.id).forEach(r =>
-    rec.push({d:r.d, w:`文法 Unit ${u.no} ${u.name}`, s:r.s, t:r.t})));
+    rec.push({d:r.d, w:`文法 ${u.isSchool ? "學校 " + u.name : "Unit " + u.no + " " + u.name}`,
+              s:r.s, t:r.t})));
   allSets().forEach(s => getVocabHistory(s.id).forEach(r =>
     rec.push({d:r.d, w:`單字 ${s.name}${r.p ? ` 第${r.p}篇` : ""}・${r.m === "mcq" ? "選擇題" : "拼字"}`, s:r.s, t:r.t})));
   rec.sort((a,b) => String(b.d).localeCompare(String(a.d)));

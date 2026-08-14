@@ -69,7 +69,7 @@
   }
 
   function unitStats(d){
-    return UNITS.map(u => {
+    return allUnits().map(u => {
       const h = d.quiz[u.id] || [];
       const pcts = h.map(r => Math.round(r.s / r.t * 100));
       return {
@@ -97,7 +97,7 @@
         <div class="sub">共 ${t.learnable} 字（${pct}%）</div></div>
       <div class="kpi"><div class="v">${t.hard}</div><div class="l">標記不熟</div>
         <div class="sub">需要再複習</div></div>
-      <div class="kpi"><div class="v">${passed} / ${UNITS.length}</div><div class="l">文法單元通過</div>
+      <div class="kpi"><div class="v">${passed} / ${us.length}</div><div class="l">文法單元通過</div>
         <div class="sub">80 分以上算通過</div></div>
       <div class="kpi"><div class="v">${tests}</div><div class="l">做過的測驗</div>
         <div class="sub">${lastAt ? "最近 " + fmtTime(lastAt) : "尚無紀錄"}</div></div>
@@ -113,11 +113,11 @@
                    .sort((a,b) => a.best - b.best);
     if (weak.length){
       out.push(`<div class="alert"><span class="ico">⚠️</span><div>
-        <b>文法還沒過關：</b>${weak.map(x => `Unit ${x.u.no} ${x.u.name}（最高 ${x.best} 分）`).join("、")}</div></div>`);
+        <b>文法還沒過關：</b>${weak.map(x => `${x.u.isSchool ? '學校 '+x.u.name : 'Unit '+x.u.no+' '+x.u.name}（最高 ${x.best} 分）`).join("、")}</div></div>`);
     }
     if (notYet.length){
       out.push(`<div class="alert"><span class="ico">⬜</span><div>
-        <b>還沒測驗過：</b>${notYet.map(x => `Unit ${x.u.no} ${x.u.name}`).join("、")}</div></div>`);
+        <b>還沒測驗過：</b>${notYet.map(x => `${x.u.isSchool ? '學校 '+x.u.name : 'Unit '+x.u.no+' '+x.u.name}`).join("、")}</div></div>`);
     }
     // 不熟最多的主題
     const hardBySet = allSets().map(s => ({s, n:Object.keys((d.vocab[s.id]||{hard:{}}).hard).length}))
@@ -144,7 +144,7 @@
 
   function grammarSec(d){
     const rows = unitStats(d).map(x => `<tr>
-      <td>Unit ${x.u.no}<div class="muted small">${x.u.name}</div></td>
+      <td>${x.u.isSchool ? '學校 ' + x.u.name : 'Unit ' + x.u.no}<div class="muted small">${x.u.isSchool ? (x.u.brief||'') : x.u.name}</div></td>
       <td class="num">${x.times || "–"}</td>
       <td class="num">${scoreTag(x.best)}</td>
       <td class="num">${x.last === null ? "–" : x.last + " 分"}</td>
@@ -152,7 +152,7 @@
     </tr>`).join("");
     const banks = unitStats(d).filter(x => x.wrongs > 0).map(x =>
       `<details class="qbox" data-unit="${x.u.id}">
-        <summary>Unit ${x.u.no} ${x.u.name}　答錯的 ${x.wrongs} 題</summary>
+        <summary>${x.u.isSchool ? '學校 '+x.u.name : 'Unit '+x.u.no+' '+x.u.name}　答錯的 ${x.wrongs} 題</summary>
         <div class="qlist muted small" style="margin-top:8px">載入中…</div>
       </details>`).join("");
     return `<div class="sec-title">文法測驗</div>
@@ -205,8 +205,8 @@
 
   function historySec(d){
     const rec = [];
-    UNITS.forEach(u => (d.quiz[u.id] || []).forEach(r =>
-      rec.push({d:r.d, what:`文法 Unit ${u.no} ${u.name}`, s:r.s, t:r.t})));
+    allUnits().forEach(u => (d.quiz[u.id] || []).forEach(r =>
+      rec.push({d:r.d, what:`文法 ${u.isSchool ? '學校 '+u.name : 'Unit '+u.no+' '+u.name}`, s:r.s, t:r.t})));
     allSets().forEach(s => (d.vquiz[s.id] || []).forEach(r =>
       rec.push({d:r.d, what:`單字 ${s.name}${r.p ? ` 第${r.p}篇` : ""}・${r.m === "mcq" ? "選擇題" : "拼字"}`, s:r.s, t:r.t})));
     if (!rec.length) return "";
