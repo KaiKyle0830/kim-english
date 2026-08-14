@@ -1,5 +1,7 @@
 // 離線快取：安裝時抓齊所有資源，之後快取優先、背景更新
-const CACHE = "kim-english-v13";
+const CACHE = "kim-english-v14";
+// 發音檔另外放一個快取：版本更新時不要把已經下載好的語音清掉（有 2000 多個檔案）
+const AUDIO_CACHE = "kim-english-audio-v1";
 const ASSETS = [
   "index.html", "vocab.html", "lessons.html", "wordlist.html", "cards.html",
   "vocabquiz.html", "mcq.html", "spell.html",
@@ -7,7 +9,7 @@ const ASSETS = [
   "school.html", "schoolunit.html", "share.html", "slides.html",
   "css/style.css", "css/slides.css", "js/app.js", "js/units.js",
   "data/words.js", "data/easy.js", "data/school.js", "data/slides.js",
-  "data/report-config.js",
+  "data/report-config.js", "data/audio.js",
   "data/grammar/s1.js", "data/grammar/s2.js",
   "data/grammar/u1.js", "data/grammar/u2.js", "data/grammar/u3.js", "data/grammar/u4.js",
   "data/grammar/u5.js", "data/grammar/u6.js", "data/grammar/u7.js", "data/grammar/u8.js",
@@ -20,12 +22,25 @@ self.addEventListener("install", e => {
 });
 self.addEventListener("activate", e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE && k !== AUDIO_CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
+  const url = new URL(e.request.url);
+  if (url.origin === location.origin && /\/audio\/[0-9a-f]{8}\.mp3$/.test(url.pathname)){
+    // 發音檔的內容永遠不會變，抓過一次就直接用快取，不必再回伺服器確認
+    e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+      if (res.ok){
+        const copy = res.clone();
+        caches.open(AUDIO_CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+      }
+      return res;
+    })));
+    return;
+  }
   e.respondWith(
     caches.match(e.request, {ignoreSearch:true}).then(hit => {
       const fetched = fetch(e.request).then(res => {

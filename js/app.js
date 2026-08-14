@@ -379,17 +379,58 @@ if (typeof window !== "undefined"){
   addEventListener("load", () => setTimeout(maybeAutoReport, 2000));
 }
 
-// ---------- 發音 (Web Speech API) ----------
+// ---------- 發音 ----------
+// 優先播 audio/ 底下事先合成好的 mp3（用 gen/generate_audio.py 產生，微軟神經語音），
+// 每支手機聽起來都一樣好；沒有現成音檔時才退回瀏覽器內建的語音。
+
+// 和 gen/generate_audio.py 的 key_of() 是同一套雜湊（FNV-1a 32-bit）
+function audioKey(text){
+  const bytes = new TextEncoder().encode(String(text || "").replace(/\s+/g, " ").trim());
+  let h = 2166136261;
+  for (let i = 0; i < bytes.length; i++){
+    h = Math.imul(h ^ bytes[i], 16777619) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+// data/audio.js 把所有 key 接成一長串，每 8 個字元一個
+let _audioKeys = null;
+function hasAudio(key){
+  if (!_audioKeys){
+    const s = window.AUDIO_KEYS || "";
+    _audioKeys = new Set();
+    for (let i = 0; i + 8 <= s.length; i += 8) _audioKeys.add(s.substr(i, 8));
+  }
+  return _audioKeys.has(key);
+}
+
+// 使用者可以自己切回內建語音（例如手機不方便關靜音時）
+function useBuiltinVoice(){ return !!loadStore().builtinVoice; }
+function setBuiltinVoice(on){
+  const st = loadStore();
+  st.builtinVoice = !!on;
+  saveStore(st);
+}
+
 let _voice = null;
 function pickVoice(){
   const vs = speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
-  _voice = vs.find(v => v.name.includes("Samantha")) || vs.find(v => v.lang === "en-US") || vs[0] || null;
+  const score = v => {
+    const n = v.name;
+    // 各平台上真的比較好聽的：Edge 的線上神經語音 > Google 語音 > Apple 進階語音
+    if (/Natural|Neural/i.test(n)) return 5;
+    if (/^Google/.test(n)) return 4;
+    if (/Enhanced|Premium|Siri/i.test(n)) return 3;
+    if (/Samantha|Ava|Allison|Karen|Serena/.test(n)) return 2;
+    return 1;
+  };
+  const us = vs.filter(v => v.lang === "en-US" || v.lang === "en_US");
+  _voice = (us.length ? us : vs).sort((a, b) => score(b) - score(a))[0] || null;
 }
 if ("speechSynthesis" in window){
   pickVoice();
   speechSynthesis.onvoiceschanged = pickVoice;
 }
-function speak(text){
+function ttsSpeak(text){
   if (!("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
@@ -397,6 +438,24 @@ function speak(text){
   u.rate = 0.9;
   if (_voice) u.voice = _voice;
   speechSynthesis.speak(u);
+}
+
+let _player = null;
+function stopSpeaking(){
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  if (_player){ _player.pause(); _player = null; }
+}
+function speak(text){
+  stopSpeaking();
+  const key = audioKey(text);
+  if (useBuiltinVoice() || !hasAudio(key)){ ttsSpeak(text); return; }
+  const a = new Audio("audio/" + key + ".mp3");
+  _player = a;
+  // 音檔壞掉或被擋下來（例如還沒下載又沒網路）就改用內建語音，不能讓它沒聲音
+  const fallback = () => { if (_player === a){ _player = null; ttsSpeak(text); } };
+  a.onerror = fallback;
+  const p = a.play();
+  if (p && p.catch) p.catch(fallback);
 }
 
 // ---------- 隨機 ----------

@@ -62,12 +62,26 @@
   </a>
 
   <a class="btn ghost" href="share.html" style="margin-top:6px">📤 回報進度給老師</a>
+
+  <div class="card" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <b>🔊 發音設定</b><span class="muted small" id="audioStat">–</span>
+    </div>
+    <button class="btn ghost" id="dlAudio" style="margin-top:10px">🎧 下載發音檔（離線也能聽）</button>
+    <label class="muted small" style="display:flex;gap:8px;align-items:center;margin-top:12px">
+      <input type="checkbox" id="builtinVoice"> 改用手機內建語音
+    </label>
+    <div class="muted small" style="margin-top:6px">
+      iPhone 開靜音模式時聽不到發音檔，可以關掉靜音，或勾選上面改用內建語音。
+    </div>
+  </div>
 </main>
 <script src="data/words.js"></script>
 <script src="data/easy.js"></script>
 <script src="data/school.js"></script>
 <script src="js/units.js"></script>
 <script src="data/report-config.js"></script>
+<script src="data/audio.js"></script>
 <script src="js/app.js"></script>
 <script>
 (function(){
@@ -105,6 +119,56 @@
   let wrongs = 0;
   UNITS.forEach(u => wrongs += getWrongs(u.id).length);
   $("#wrongCount").textContent = wrongs ? `${wrongs} 題待重練` : "答錯的文法題會收集在這裡";
+
+  // ---- 發音設定 ----
+  const AUDIO_CACHE = "kim-english-audio-v1";   // 要和 sw.js 一致
+  const KEYS = (window.AUDIO_KEYS || "").match(/.{8}/g) || [];
+  const stat = $("#audioStat"), dl = $("#dlAudio"), chk = $("#builtinVoice");
+
+  chk.checked = useBuiltinVoice();
+  chk.onchange = () => {
+    setBuiltinVoice(chk.checked);
+    speak("Hello, Kin!");   // 馬上唸一句讓人聽得出差別
+  };
+
+  // 已經下載幾句
+  async function refreshStat(){
+    if (!KEYS.length){ stat.textContent = "內建語音"; dl.style.display = "none"; return; }
+    if (!("caches" in window)){ stat.textContent = `${KEYS.length} 句`; dl.style.display = "none"; return; }
+    const done = (await (await caches.open(AUDIO_CACHE)).keys()).length;
+    if (done >= KEYS.length){
+      stat.textContent = `已離線 ${KEYS.length} 句 ✓`;
+      dl.disabled = true;
+      dl.textContent = "🎧 發音檔已全部下載";
+    } else {
+      stat.textContent = `已下載 ${done} / ${KEYS.length} 句`;
+    }
+  }
+  refreshStat();
+
+  dl.onclick = async () => {
+    const cache = await caches.open(AUDIO_CACHE);
+    const have = new Set((await cache.keys())
+      .map(r => (r.url.match(/([0-9a-f]{8})\.mp3$/) || [])[1]));
+    const todo = KEYS.filter(k => !have.has(k));
+    const total = todo.length;
+    let done = 0, failed = 0;
+    dl.disabled = true;
+    const tick = () => { dl.textContent = `下載中… ${done} / ${total}`; };
+    tick();
+    // 同時抓 6 個，太多會塞住手機的網路
+    await Promise.all(Array.from({length: 6}, async () => {
+      while (todo.length){
+        try { await cache.add("audio/" + todo.pop() + ".mp3"); }
+        catch(e){ failed++; }
+        done++;
+        if (done % 10 === 0) tick();
+      }
+    }));
+    dl.disabled = false;
+    dl.textContent = failed ? `🎧 有 ${failed} 個沒下載到，再按一次` : "🎧 下載發音檔（離線也能聽）";
+    refreshStat();
+  };
 })();
 </script>
 </body>
