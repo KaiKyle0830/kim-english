@@ -1,5 +1,5 @@
 // 離線快取：安裝時抓齊所有資源，之後快取優先、背景更新
-const CACHE = "kim-english-v14";
+const CACHE = "kim-english-v15";
 // 發音檔另外放一個快取：版本更新時不要把已經下載好的語音清掉（有 2000 多個檔案）
 const AUDIO_CACHE = "kim-english-audio-v1";
 const ASSETS = [

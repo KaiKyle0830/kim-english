@@ -290,7 +290,7 @@ async function sendReport(opts){
         from_name: cfg.studentName || "學生", message: body})
     });
     const j = await res.json().catch(() => ({}));
-    if (res.ok && j.success !== false) return {ok:true, how:"web3forms"};
+    if (res.ok && j.success !== false){ noteSent(); return {ok:true, how:"web3forms"}; }
     return {ok:false, how:"web3forms", message:(j && j.message) || "寄送失敗"};
   }
 
@@ -302,7 +302,7 @@ async function sendReport(opts){
       body: JSON.stringify({_subject: subject, name: cfg.studentName || "學生", message: body})
     });
     const j = await res.json().catch(() => ({}));
-    if (res.ok) return {ok:true, how:"formsubmit", message:j && j.message};
+    if (res.ok){ noteSent(); return {ok:true, how:"formsubmit", message:j && j.message}; }
     return {ok:false, how:"formsubmit", message:"寄送失敗"};
   }
 
@@ -345,6 +345,15 @@ function setAutoState(o){
   st.auto = o;
   saveStore(st);
 }
+// 記下「這份進度已經寄給老師了」。手動回報也會呼叫，
+// 這樣按完「傳送給老師」不會馬上又自動補寄一封。
+function noteSent(fp){
+  setAutoState({fp: fp || progressFingerprint(), at: new Date().toISOString(), day: todayStr()});
+}
+function autoMinHours(){
+  const cfg = window.REPORT_CONFIG || {};
+  return cfg.minHours == null ? 6 : cfg.minHours;
+}
 let autoSending = false;
 async function maybeAutoReport(){
   const cfg = window.REPORT_CONFIG || {};
@@ -357,16 +366,22 @@ async function maybeAutoReport(){
   const a = getAutoState();
   if (a.fp === fp) return false;                                // 沒有新進度就不寄
 
-  const newDay = a.day !== todayStr();
+  // 不管有沒有跨天，距離上一封一定要滿 minHours 小時。
+  // （以前跨天就跳過這道關卡，結果隔天一早換幾次頁就連寄好幾封）
   const hours = a.at ? (Date.now() - new Date(a.at).getTime()) / 36e5 : Infinity;
-  if (!newDay && hours < (cfg.minHours == null ? 6 : cfg.minHours)) return false;
+  if (hours < autoMinHours()) return false;
 
   autoSending = true;
+  // 先寫「已寄出」再送，不能等回應回來才寫：
+  // pagehide 觸發時這一頁馬上就被關掉，keepalive 的請求照樣送得出去，
+  // 但寫狀態的程式碼已經沒機會執行，下一頁看到的還是舊狀態，於是又寄一次。
+  // autoSending 只擋得住同一個頁面，換頁就失效，所以要靠 localStorage 擋。
+  noteSent(fp);
   try {
     const r = await sendReport({silent:true, keepalive:true});
-    if (r.ok) setAutoState({fp, at:new Date().toISOString(), day:todayStr()});
+    if (!r.ok) setAutoState(a);        // 真的沒寄成功才還原，下次再試
     return r.ok;
-  } catch(e){ return false; }
+  } catch(e){ setAutoState(a); return false; }
   finally { autoSending = false; }
 }
 if (typeof window !== "undefined"){

@@ -59,7 +59,7 @@
 
   const a = getAutoState();
   const autoLine = cfg.auto
-    ? `自動回報已開啟：你每天練習完關掉 App，紀錄就會自己傳給老師。${
+    ? `自動回報已開啟：練習完關掉 App，紀錄就會自己傳給老師（最快每 ${autoMinHours()} 小時一封）。${
         a.at ? `<br>上次自動回報：${String(a.at).replace("T"," ").slice(0,16)}` : ""}`
     : "";
   $("#howto").innerHTML = (cfg.method === "mailto"
