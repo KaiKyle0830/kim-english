@@ -1,5 +1,9 @@
-// 離線快取：安裝時抓齊所有資源，之後快取優先、背景更新
-const CACHE = "kim-english-v15";
+// 離線快取：安裝時抓齊所有資源。
+// 網頁和程式碼走「網路優先」：有網路就一定拿到最新版，重新整理一次就會更新；
+// 網路不通或太慢（超過 NET_TIMEOUT）才改用快取，所以離線一樣能用。
+// 發音檔內容永遠不會變，走「快取優先」，不必每次回伺服器問。
+const CACHE = "kim-english-v16";
+const NET_TIMEOUT = 2500;
 // 發音檔另外放一個快取：版本更新時不要把已經下載好的語音清掉（有 2000 多個檔案）
 const AUDIO_CACHE = "kim-english-audio-v1";
 const ASSETS = [
@@ -41,17 +45,30 @@ self.addEventListener("fetch", e => {
     })));
     return;
   }
-  e.respondWith(
-    caches.match(e.request, {ignoreSearch:true}).then(hit => {
-      const fetched = fetch(e.request).then(res => {
-        // 先複製，等 caches.open 完成後 body 可能已被頁面讀走就不能再 clone
-        if (res.ok){
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        }
-        return res;
-      }).catch(() => hit);
-      return hit || fetched;
-    })
-  );
+  e.respondWith(networkFirst(e.request));
 });
+
+// 網路優先：以網路的回應為準，順便更新快取。
+// 網路太慢就先拿快取頂著（但背景那個 fetch 還是會把快取更新好），
+// 網路完全不通就直接用快取。
+function networkFirst(req){
+  return new Promise(resolve => {
+    let settled = false;
+    const done = res => { if (!settled && res){ settled = true; resolve(res); } };
+    const fromCache = () => caches.match(req, {ignoreSearch:true});
+
+    const slow = setTimeout(() => fromCache().then(done), NET_TIMEOUT);
+    fetch(req).then(res => {
+      clearTimeout(slow);
+      // 先複製，等 caches.open 完成後 body 可能已被頁面讀走就不能再 clone
+      if (res.ok){
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+      }
+      done(res);
+    }).catch(() => {
+      clearTimeout(slow);
+      fromCache().then(hit => done(hit || Response.error()));
+    });
+  });
+}
