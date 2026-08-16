@@ -21,9 +21,10 @@
   <a class="btn ghost" id="wordsBtn">📚 這課的單字（每篇 10 個字）</a>
   <div style="height:10px"></div>
   <a class="btn ghost" id="quizBtn">📝 單字考試</a>
+  <!-- 用 margin 而不是間隔用的 div：沒有文法題時整顆按鈕會被 hidden 收掉，間距也要跟著消失 -->
+  <a class="btn ghost hidden" id="gQuizBtn" style="margin-top:10px">✍️ 這課的文法練習</a>
 
   <div class="card review tablewrap hidden" id="grammarCard" style="margin-top:14px"></div>
-  <a class="btn ghost hidden" id="gQuizBtn">✍️ 這課的文法練習</a>
 </main>
 <script src="data/words.js"></script>
 <script src="data/easy.js"></script>
