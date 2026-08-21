@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>透鏡成像</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/lens.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <a class="back" href="index.html">‹</a>
+    <div>
+      <h1>🔍 透鏡成像</h1>
+      <div class="sub">拖曳物體，看看像是放大還縮小、正立還倒立</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="seg" id="typeSeg">
+      <button data-t="convex" class="on">凸透鏡<span class="s">中間厚・會聚光線</span></button>
+      <button data-t="concave">凹透鏡<span class="s">中間薄・發散光線</span></button>
+    </div>
+    <div class="ctl">
+      <div class="lab"><b>焦距 f</b><span id="fVal">6.0 cm</span></div>
+      <input type="range" id="fIn" min="3" max="12" step="0.5" value="6">
+    </div>
+    <div class="ctl">
+      <div class="lab"><b>物距（物體到透鏡的距離）</b><span id="pVal">16.0 cm</span></div>
+      <input type="range" id="pIn" min="1" max="40" step="0.5" value="16">
+    </div>
+    <label class="muted small" style="display:flex;gap:8px;align-items:center;margin-top:14px">
+      <input type="checkbox" id="ray3" checked> 顯示第三條光線（朝焦點入射）
+    </label>
+  </div>
+
+  <div class="stage">
+    <canvas id="stage"></canvas>
+    <div class="legend">
+      <span style="color:#f59e0b"><i></i><span id="lg1">平行主軸 → 過焦點</span></span>
+      <span style="color:#10b981"><i></i>通過鏡心 → 不轉彎</span>
+      <span style="color:#a855f7"><i></i><span id="lg3">過焦點 → 平行主軸</span></span>
+    </div>
+    <div class="hint">👆 直接在透鏡左邊拖曳，就能移動物體；虛線代表「光線往回延長」</div>
+  </div>
+
+  <div class="card result">
+    <div class="muted small" id="caseWhere">物距 > 2f（兩倍焦距外）</div>
+    <div class="name" id="caseName">倒立、縮小的實像</div>
+    <div class="tags" id="tags"></div>
+    <div class="nums">
+      <div><div class="v" id="numP">16.0</div><div class="l">物距 (cm)</div></div>
+      <div><div class="v" id="numQ">9.6</div><div class="l" id="numQL">像距 (cm)</div></div>
+      <div><div class="v" id="numM">0.60×</div><div class="l">放大率</div></div>
+    </div>
+    <div class="use"><span>💡</span><span id="useText"></span></div>
+  </div>
+
+  <div class="card">
+    <b>試試看這些情境</b>
+    <div class="chips" style="margin-top:12px" id="presets">
+      <button data-key="out2F">📷 照相機</button>
+      <button data-key="at2F">🖨️ 等大實像</button>
+      <button data-key="between">🎬 投影機</button>
+      <button data-key="atF">🔦 探照燈</button>
+      <button data-key="inF">🔍 放大鏡</button>
+      <button data-key="concave">👓 近視眼鏡</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <b>成像規則整理</b>
+    <div class="muted small" style="margin-top:2px">目前的情況會用底色標出來</div>
+    <div class="tablewrap" style="margin-top:10px"><table class="rules" id="rules"></table></div>
+    <div class="explain" style="margin-top:14px">
+      <b>三個口訣</b><br>
+      ① <b>一倍焦距分虛實</b>：物距小於 f 成虛像，大於 f 成實像。<br>
+      ② <b>二倍焦距分大小</b>：物距大於 2f 成縮小的像，小於 2f 成放大的像。<br>
+      ③ <b>實像必倒立、虛像必正立</b>（凸透鏡、凹透鏡都一樣）。
+    </div>
+  </div>
+
+  <details class="card">
+    <summary style="font-weight:700;cursor:pointer">📐 想知道數字怎麼算出來的？</summary>
+    <div class="muted small" style="margin-top:10px;line-height:1.8">
+      成像公式（高中會學，國中先看看就好）：<b>1/物距 + 1/像距 = 1/焦距</b>，
+      凸透鏡焦距取正號、凹透鏡取負號。移項之後就是
+      <b>像距 = 物距 × 焦距 ÷ (物距 − 焦距)</b>。
+    </div>
+    <div class="explain" style="margin-top:12px" id="calc"></div>
+  </details>
+
+  <div class="card quiz">
+    <div id="qStart">
+      <b>📝 小測驗</b>
+      <div class="muted small" style="margin-top:4px" id="qBest">6 題選擇題，看看你懂了沒</div>
+      <button class="btn primary" id="qGo" style="margin-top:14px">開始測驗</button>
+    </div>
+    <div id="qBody" class="hidden"></div>
+  </div>
+</main>
+<script src="js/lens.js"></script>
+<script>
+if ("serviceWorker" in navigator){
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>

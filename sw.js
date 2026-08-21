@@ -2,7 +2,7 @@
 // 網頁和程式碼走「網路優先」：有網路就一定拿到最新版，重新整理一次就會更新；
 // 網路不通或太慢（超過 NET_TIMEOUT）才改用快取，所以離線一樣能用。
 // 發音檔內容永遠不會變，走「快取優先」，不必每次回伺服器問。
-const CACHE = "kim-english-v16";
+const CACHE = "kim-english-v17";
 const NET_TIMEOUT = 2500;
 // 發音檔另外放一個快取：版本更新時不要把已經下載好的語音清掉（有 2000 多個檔案）
 const AUDIO_CACHE = "kim-english-audio-v1";
@@ -11,7 +11,9 @@ const ASSETS = [
   "vocabquiz.html", "mcq.html", "spell.html",
   "grammar.html", "unit.html", "wrongs.html",
   "school.html", "schoolunit.html", "share.html", "slides.html",
-  "css/style.css", "css/slides.css", "js/app.js", "js/units.js",
+  "lens.html",
+  "css/style.css", "css/slides.css", "css/lens.css",
+  "js/app.js", "js/units.js", "js/lens.js",
   "data/words.js", "data/easy.js", "data/school.js", "data/slides.js",
   "data/report-config.js", "data/audio.js",
   "data/grammar/s1.js", "data/grammar/s2.js",
